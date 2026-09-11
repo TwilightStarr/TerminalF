@@ -18,6 +18,18 @@ jobs:
       - name: Eksik platform klasörlerini oluştur
         run: flutter create --platforms=android --project-name terminal_flutter --org com.example .
 
+      - name: Android SDK surumunu yukselt
+        run: |
+          for f in android/app/build.gradle android/app/build.gradle.kts; do
+            if [ -f "$f" ]; then
+              sed -i -E 's/compileSdk[[:space:]]*=[[:space:]]*flutter\.compileSdkVersion/compileSdk = 35/' "$f"
+              sed -i -E 's/compileSdkVersion[[:space:]]+flutter\.compileSdkVersion/compileSdkVersion 35/' "$f"
+              sed -i -E 's/targetSdk[[:space:]]*=[[:space:]]*flutter\.targetSdkVersion/targetSdk = 35/' "$f"
+              sed -i -E 's/targetSdkVersion[[:space:]]+flutter\.targetSdkVersion/targetSdkVersion 35/' "$f"
+            fi
+          done
+          cat android/app/build.gradle* 2>/dev/null | grep -i sdk
+
       - run: flutter pub get
       - run: flutter build apk --release
 
