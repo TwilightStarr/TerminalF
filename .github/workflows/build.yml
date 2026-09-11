@@ -18,25 +18,25 @@ jobs:
       - name: Eksik platform klasörlerini oluştur
         run: flutter create --platforms=android --project-name terminal_flutter --org com.example .
 
-      - name: En guncel Android SDK'yi kur ve kullan
+      - name: Gercekten var olan en guncel Android SDK'yi bul ve kur
         run: |
-          LATEST=$(ls /usr/local/lib/android/sdk/platforms | grep -oE '[0-9]+' | sort -n | tail -1)
-          NEXT=$((LATEST + 3))
-          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-$NEXT" || true
+          SDKMANAGER=/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager
+          yes | $SDKMANAGER --licenses > /dev/null 2>&1 || true
+          LATEST=$($SDKMANAGER --list 2>/dev/null | grep -oE '^  platforms;android-[0-9]+' | grep -oE '[0-9]+' | sort -n | tail -1)
+          echo "Gercek en guncel SDK: $LATEST"
+          $SDKMANAGER "platforms;android-$LATEST"
           for f in android/app/build.gradle android/app/build.gradle.kts; do
             if [ -f "$f" ]; then
-              sed -i -E "s/compileSdk[[:space:]]*=[[:space:]]*flutter\.compileSdkVersion/compileSdk = $NEXT/" "$f"
-              sed -i -E "s/compileSdkVersion[[:space:]]+flutter\.compileSdkVersion/compileSdkVersion $NEXT/" "$f"
-              sed -i -E "s/compileSdk[[:space:]]*=[[:space:]]*[0-9]+/compileSdk = $NEXT/" "$f"
-              sed -i -E "s/compileSdkVersion[[:space:]]+[0-9]+/compileSdkVersion $NEXT/" "$f"
-              sed -i -E "s/targetSdk[[:space:]]*=[[:space:]]*flutter\.targetSdkVersion/targetSdk = $NEXT/" "$f"
-              sed -i -E "s/targetSdkVersion[[:space:]]+flutter\.targetSdkVersion/targetSdkVersion $NEXT/" "$f"
-              sed -i -E "s/targetSdk[[:space:]]*=[[:space:]]*[0-9]+/targetSdk = $NEXT/" "$f"
-              sed -i -E "s/targetSdkVersion[[:space:]]+[0-9]+/targetSdkVersion $NEXT/" "$f"
+              sed -i -E "s/compileSdk[[:space:]]*=[[:space:]]*flutter\.compileSdkVersion/compileSdk = $LATEST/" "$f"
+              sed -i -E "s/compileSdkVersion[[:space:]]+flutter\.compileSdkVersion/compileSdkVersion $LATEST/" "$f"
+              sed -i -E "s/compileSdk[[:space:]]*=[[:space:]]*[0-9]+/compileSdk = $LATEST/" "$f"
+              sed -i -E "s/compileSdkVersion[[:space:]]+[0-9]+/compileSdkVersion $LATEST/" "$f"
+              sed -i -E "s/targetSdk[[:space:]]*=[[:space:]]*flutter\.targetSdkVersion/targetSdk = $LATEST/" "$f"
+              sed -i -E "s/targetSdkVersion[[:space:]]+flutter\.targetSdkVersion/targetSdkVersion $LATEST/" "$f"
+              sed -i -E "s/targetSdk[[:space:]]*=[[:space:]]*[0-9]+/targetSdk = $LATEST/" "$f"
+              sed -i -E "s/targetSdkVersion[[:space:]]+[0-9]+/targetSdkVersion $LATEST/" "$f"
             fi
           done
-          echo "Kullanilan SDK: $NEXT"
           cat android/app/build.gradle* 2>/dev/null | grep -i sdk
 
       - run: flutter pub get
