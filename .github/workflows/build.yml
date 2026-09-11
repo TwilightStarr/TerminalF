@@ -17,7 +17,7 @@ jobs:
           channel: 'stable'
 
       - name: Eksik platform klasörlerini oluştur
-        run: flutter create --platforms=android .
+        run: flutter create --platforms=android --project-name terminal_flutter --org com.example .
 
       - run: flutter pub get
       - run: flutter build apk --release
