@@ -1,0 +1,44 @@
+name: terminal_flutter
+description: "AMOLED ekranlar icin cihaz ve sistem bilgi paneli. Godot 4 surumunden Flutter'a tasinan proje - temel (foundation) surum."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # --- Godot cekirdeginde hazir gelen, burada paketlerle karsilanan ozellikler ---
+  battery_plus: ^6.2.1          # OS.get_power_state / get_power_percent_left karsiligi
+  device_info_plus: ^11.2.0     # OS.get_model_name / get_name / get_version karsiligi
+  network_info_plus: ^5.0.3     # IP.get_local_addresses karsiligi
+  path_provider: ^2.1.5         # OS.get_user_data_dir karsiligi
+  shared_preferences: ^2.3.3    # ConfigFile (user://terminal_settings.cfg) karsiligi
+  wakelock_plus: ^1.2.8         # DisplayServer.screen_set_keep_on karsiligi
+  vibration: ^2.0.1             # Input.vibrate_handheld karsiligi
+  permission_handler: ^11.3.1   # OS.request_permissions karsiligi
+  installed_apps: ^2.0.0        # Godot cekirdeginde karsiligi yok - yuklu
+                                 # uygulamalari listeleme/yonetme (Android only,
+                                 # bkz. README > YGL ve > "sinirlar")
+  screen_brightness: ^2.1.7     # Godot cekirdeginde karsiligi yok - ekran
+                                 # parlakligini uygulama icinden yonetme.
+                                 # Yalnizca uygulama-seviyesi API kullanilir,
+                                 # bu yuzden ek bir Android/iOS izni gerekmez
+                                 # (bkz. README > YGL ve > "sinirlar")
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/icon.svg
+
+# NOT: Surumler bu dosyanin yazildigi tarih itibariyla guncel kararli
+# surumlerdir. `flutter pub get` calistirdiktan sonra `flutter pub
+# outdated` ile kontrol edip guncelleyebilirsiniz (bkz. README > YGL).
