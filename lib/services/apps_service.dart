@@ -50,7 +50,7 @@ class AppsService {
   /// düğmesi yalnızca burada bulunur — bkz. sınıf yorumundaki platform kısıtı.
   Future<void> openSystemSettings(String packageName) async {
     try {
-      await InstalledApps.openSettings(packageName);
+      InstalledApps.openSettings(packageName);
     } catch (_) {
       // Platform desteklemiyorsa sessizce yok say.
     }
