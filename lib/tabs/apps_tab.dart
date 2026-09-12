@@ -28,10 +28,16 @@ import 'winutil_tab.dart';
 /// Diğer sekmelerin aksine kendi veri yükünü kendi yönetir (tek seferlik,
 /// ağır bir liste okuması olduğu için ana ekranın 1 saniyelik döngüsüne
 /// dahil edilmedi) — bu yüzden `HomeScreen`'den prop almadan
-/// çalışabiliyor. Ayrıca kendi bağımsız, sınırlı yükseklikli kaydırma
-/// alanını da kendi yönetir (bkz. `HomeScreen._buildScrollableBody()`)
-/// ki uzun uygulama listelerinde `ListView.builder` ile gerçek
-/// sanallaştırma sağlanabilsin — bkz. `_AppsListSection`.
+/// çalışabiliyor. Kendi kaydırma alanını da kendi yönetir (bkz.
+/// `HomeScreen._buildScrollableBody()`): "Yüklü Uygulamalar" alt
+/// bölümü tek bir `CustomScrollView` kullanır ki hem üst bilgi kartı
+/// hem de uygulama listesi TEK bir kaydırma ekseninde, doğal biçimde
+/// aşağı insin, hem de liste satırları `SliverList` ile gerçek
+/// sanallaştırma korusun (yalnızca görünen satırlar oluşturulur) —
+/// bkz. `_appsListSlivers()`. Eskiden liste, kendi başına sınırlı bir
+/// `Expanded` alanına sıkıştırılmış ayrı bir `ListView.builder`'dı; üst
+/// kart uzadığında bu alan neredeyse sıfıra iniyor ve liste sayfanın alt
+/// kısmında görünmez/erişilemez kalıyordu.
 ///
 /// ÖNEMLİ: Android, üçüncü parti uygulamaların diğer uygulamaların anlık
 /// RAM kullanımını okumasına ya da onları tek dokunuşla (Windows Görev
@@ -202,12 +208,33 @@ class _AppsTabState extends State<AppsTab> {
   /// Uygulamalar" alt sekmesi seçiliyken gösterilir.
   Widget _buildInstalledSection() {
     final apps = _filtered;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: _buildManagementCard(apps)),
+        const SliverToBoxAdapter(child: SizedBox(height: 18)),
+        if (_loading)
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: CircularProgressIndicator(color: AppColors.accentCyan)),
+          )
+        else if (_isIOS)
+          const SliverFillRemaining(hasScrollBody: false, child: _PlatformUnsupportedNotice())
+        else if (apps.isEmpty)
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(child: Text('Uygulama bulunamadı.', style: TextStyle(color: AppColors.muted))),
+          )
+        else
+          ..._appsListSlivers(apps),
+        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+      ],
+    );
+  }
+
+  Widget _buildManagementCard(List<AppInfo> apps) {
+    return TerminalCard(
+      title: '› UYGULAMA YÖNETİMİ',
       children: [
-        TerminalCard(
-          title: '› UYGULAMA YÖNETİMİ',
-          children: [
             const Text(
               'Android güvenlik modeli, bir uygulamanın diğerlerinin anlık RAM '
               'kullanımını okumasına ya da onları tek tuşla durdurmasına izin '
@@ -258,37 +285,93 @@ class _AppsTabState extends State<AppsTab> {
                 ),
               ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              _loading ? 'Yükleniyor...' : 'Toplam: ${apps.length} uygulama',
-              style: const TextStyle(color: AppColors.muted, fontSize: 12),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator(color: AppColors.accentCyan))
-              : _isIOS
-                  // iOS'ta `installed_apps` desteklenmediği için liste her
-                  // zaman boş döner (bkz. AppsService belgesi) — bunu
-                  // kullanıcıya "uygulama bulunamadı" gibi yanıltıcı bir
-                  // mesajla değil, gerçek nedeniyle gösteriyoruz.
-                  ? const _PlatformUnsupportedNotice()
-                  : apps.isEmpty
-                      ? const Center(
-                          child: Text('Uygulama bulunamadı.', style: TextStyle(color: AppColors.muted)),
-                        )
-                      : _AppsListSection(
-                          apps: apps,
-                          busyPackage: _busyPackage,
-                          onLaunch: (app) => _service.launch(app.packageName),
-                          onStop: _confirmStop,
-                          onUninstall: _confirmUninstall,
-                        ),
+        const SizedBox(height: 2),
+        Text(
+          _loading ? 'Yükleniyor...' : 'Toplam: ${apps.length} uygulama',
+          style: const TextStyle(color: AppColors.muted, fontSize: 12),
         ),
       ],
     );
+  }
+
+  /// "Yüklü Uygulamalar" kartının gövdesini (başlık + ayraç + satırlar)
+  /// **sliver** olarak üretir; `CustomScrollView`'a doğrudan eklenir.
+  ///
+  /// ÖNCEDEN: bu içerik ayrı bir `_AppsListSection` widget'ıydı ve kendi
+  /// `Expanded(child: ListView.builder(...))`'ına ihtiyaç duyuyordu — bu
+  /// da onu üst `Column`'da sabit/sınırlı bir yükseklik almaya mahkûm
+  /// ediyordu. Üstteki "› UYGULAMA YÖNETİMİ" kartı (açıklama metni +
+  /// arama kutusu + switch) uzun olduğunda geri kalan `Expanded` alanı
+  /// neredeyse sıfıra iniyor, liste görünmüyordu; sayfanın geri kalanı da
+  /// dış `SingleChildScrollView` içine alınmadığı için (bkz.
+  /// `home_screen.dart` > `_buildScrollableBody`) kaydırarak da
+  /// ulaşılamıyordu — kullanıcının bildirdiği "alt taraf gözükmüyor" hatası
+  /// tam olarak buydu.
+  ///
+  /// ÇÖZÜM: Artık tüm sekme (yönetim kartı + liste) TEK bir
+  /// `CustomScrollView` içinde. `SliverList`'in `itemBuilder`'ı, eski
+  /// `ListView.builder` ile birebir aynı şekilde yalnızca ekranda görünen
+  /// satırları oluşturur (gerçek sanallaştırma korunuyor), ama artık
+  /// kaydırma tüm sayfa için ortak ve doğal — liste asla "kesilmiş" veya
+  /// erişilemez kalmıyor.
+  List<Widget> _appsListSlivers(List<AppInfo> apps) {
+    return [
+      DecoratedSliver(
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        sliver: SliverPadding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+          sliver: SliverMainAxisGroup(
+            slivers: [
+              const SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '› YÜKLÜ UYGULAMALAR',
+                      style: TextStyle(
+                        color: AppColors.accentCyan,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Divider(color: AppColors.border, height: 18),
+                  ],
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final app = apps[index];
+                    final isLast = index == apps.length - 1;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: isLast ? 12 : 0),
+                      child: Column(
+                        children: [
+                          _AppTile(
+                            app: app,
+                            busy: _busyPackage == app.packageName,
+                            onLaunch: () => _service.launch(app.packageName),
+                            onStop: () => _confirmStop(app),
+                            onUninstall: () => _confirmUninstall(app),
+                          ),
+                          if (!isLast) const Divider(color: AppColors.border, height: 16),
+                        ],
+                      ),
+                    );
+                  },
+                  childCount: apps.length,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 }
 
@@ -321,121 +404,6 @@ class _PlatformUnsupportedNotice extends StatelessWidget {
               'okuma değil — Apple\'ın platform kısıtı (bkz. README).',
               style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.4),
               textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Yüklü uygulama listesinin kart görünümlü, **gerçekten sanallaştırılmış**
-/// bölümü. `TerminalCard`'ın aksine sabit boyutlu değildir — ebeveyninden
-/// (`AppsTab`'daki `Expanded`) sınırlı bir yükseklik alır ve içindeki
-/// `ListView.builder` yalnızca o an ekranda görünen (+ önbellek payı
-/// kadar) uygulama satırlarını oluşturur.
-///
-/// Önceki sürümde tüm liste, `TerminalCard` içinde tek bir `Column`'a
-/// `for` döngüsüyle aynı anda çiziliyordu — çok sayıda uygulama yüklü
-/// cihazlarda gereksiz yere pahalıydı (bkz. README > YGL, "çok sayıda
-/// uygulama yüklü cihazlarda performans" maddesi). Bu widget o maddeyi
-/// çözer; görsel stil (kenarlık, başlık, ayırıcı) `TerminalCard` ile
-/// birebir aynı kalacak şekilde elle eşlendi.
-class _AppsListSection extends StatefulWidget {
-  const _AppsListSection({
-    required this.apps,
-    required this.busyPackage,
-    required this.onLaunch,
-    required this.onStop,
-    required this.onUninstall,
-  });
-
-  final List<AppInfo> apps;
-  final String? busyPackage;
-  final ValueChanged<AppInfo> onLaunch;
-  final Future<void> Function(AppInfo app) onStop;
-  final Future<void> Function(AppInfo app) onUninstall;
-
-  @override
-  State<_AppsListSection> createState() => _AppsListSectionState();
-}
-
-class _AppsListSectionState extends State<_AppsListSection> with SingleTickerProviderStateMixin {
-  // `TerminalCard`'daki staggered fade-in ile aynı görsel dil (bkz. o
-  // widget'ın yorumu) - burada elle tekrarlanıyor çünkü `TerminalCard`
-  // sabit boyutlu (`mainAxisSize.min`) bir Column bekliyor ve `Expanded`
-  // bir `ListView` barındıramıyor.
-  late final AnimationController _controller;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine);
-    Future.delayed(const Duration(milliseconds: 40), () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final apps = widget.apps;
-    return FadeTransition(
-      opacity: _opacity,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '› YÜKLÜ UYGULAMALAR',
-              style: TextStyle(
-                color: AppColors.accentCyan,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const Divider(color: AppColors.border, height: 18),
-            Expanded(
-              child: ListView.builder(
-                // Gerçek sanallaştırma burada gerçekleşiyor: Flutter,
-                // yalnızca görünür (+ ~250 piksellik varsayılan önbellek
-                // payındaki) satırlar için `itemBuilder`'ı çağırır.
-                itemCount: apps.length,
-                itemBuilder: (context, index) {
-                  final app = apps[index];
-                  final isLast = index == apps.length - 1;
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: isLast ? 12 : 0),
-                    child: Column(
-                      children: [
-                        _AppTile(
-                          app: app,
-                          busy: widget.busyPackage == app.packageName,
-                          onLaunch: () => widget.onLaunch(app),
-                          onStop: () => widget.onStop(app),
-                          onUninstall: () => widget.onUninstall(app),
-                        ),
-                        if (!isLast) const Divider(color: AppColors.border, height: 16),
-                      ],
-                    ),
-                  );
-                },
-              ),
             ),
           ],
         ),
