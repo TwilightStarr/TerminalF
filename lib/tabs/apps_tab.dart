@@ -111,24 +111,24 @@ class _AppsTabState extends State<AppsTab> {
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.border),
         ),
-        title: const Text('Uygulamayı Durdur', style: TextStyle(color: AppColors.text)),
+        title: Text('Uygulamayı Durdur', style: TextStyle(color: AppColors.text)),
         content: Text(
           'Android, güvenlik nedeniyle bir uygulamanın başka bir uygulamayı '
           'doğrudan durdurmasına izin vermiyor. "${app.name}" için sistemin '
           '"Uygulama Bilgisi" ekranı açılacak — gerçek "Zorla Durdur" düğmesi '
           'orada.',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          style: TextStyle(color: AppColors.muted, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Vazgeç', style: TextStyle(color: AppColors.muted)),
+            child: Text('Vazgeç', style: TextStyle(color: AppColors.muted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Ayarları Aç', style: TextStyle(color: AppColors.accentCyan)),
+            child: Text('Ayarları Aç', style: TextStyle(color: AppColors.accentCyan)),
           ),
         ],
       ),
@@ -145,21 +145,21 @@ class _AppsTabState extends State<AppsTab> {
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.border),
         ),
-        title: const Text('Uygulamayı Kaldır?', style: TextStyle(color: AppColors.text)),
+        title: Text('Uygulamayı Kaldır?', style: TextStyle(color: AppColors.text)),
         content: Text(
           '"${app.name}" cihazdan kaldırılacak. Bu işlem geri alınamaz.',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          style: TextStyle(color: AppColors.muted, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Vazgeç', style: TextStyle(color: AppColors.muted)),
+            child: Text('Vazgeç', style: TextStyle(color: AppColors.muted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Kaldır', style: TextStyle(color: AppColors.danger)),
+            child: Text('Kaldır', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -213,14 +213,14 @@ class _AppsTabState extends State<AppsTab> {
         SliverToBoxAdapter(child: _buildManagementCard(apps)),
         const SliverToBoxAdapter(child: SizedBox(height: 18)),
         if (_loading)
-          const SliverFillRemaining(
+          SliverFillRemaining(
             hasScrollBody: false,
             child: Center(child: CircularProgressIndicator(color: AppColors.accentCyan)),
           )
         else if (_isIOS)
           const SliverFillRemaining(hasScrollBody: false, child: _PlatformUnsupportedNotice())
         else if (apps.isEmpty)
-          const SliverFillRemaining(
+          SliverFillRemaining(
             hasScrollBody: false,
             child: Center(child: Text('Uygulama bulunamadı.', style: TextStyle(color: AppColors.muted))),
           )
@@ -235,7 +235,7 @@ class _AppsTabState extends State<AppsTab> {
     return TerminalCard(
       title: '› UYGULAMA YÖNETİMİ',
       children: [
-            const Text(
+            Text(
               'Android güvenlik modeli, bir uygulamanın diğerlerinin anlık RAM '
               'kullanımını okumasına ya da onları tek tuşla durdurmasına izin '
               'vermez (bunu yalnızca sistem uygulamaları/kök erişimi yapabilir). '
@@ -247,33 +247,33 @@ class _AppsTabState extends State<AppsTab> {
             const SizedBox(height: 14),
             TextField(
               onChanged: (v) => setState(() => _query = v),
-              style: const TextStyle(color: AppColors.text, fontSize: 14),
+              style: TextStyle(color: AppColors.text, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Uygulama ara...',
-                hintStyle: const TextStyle(color: AppColors.muted),
+                hintStyle: TextStyle(color: AppColors.muted),
                 isDense: true,
-                prefixIcon: const Icon(Icons.search, color: AppColors.muted, size: 18),
+                prefixIcon: Icon(Icons.search, color: AppColors.muted, size: 18),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 filled: true,
                 fillColor: AppColors.background,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: AppColors.border),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: AppColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppColors.accentCyan),
+                  borderSide: BorderSide(color: AppColors.accentCyan),
                 ),
               ),
             ),
             const SizedBox(height: 10),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text('Sistem Uygulamalarını Göster', style: TextStyle(color: AppColors.muted, fontSize: 13)),
                 ),
                 Switch(
@@ -288,7 +288,7 @@ class _AppsTabState extends State<AppsTab> {
         const SizedBox(height: 2),
         Text(
           _loading ? 'Yükleniyor...' : 'Toplam: ${apps.length} uygulama',
-          style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          style: TextStyle(color: AppColors.muted, fontSize: 12),
         ),
       ],
     );
@@ -326,7 +326,7 @@ class _AppsTabState extends State<AppsTab> {
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
           sliver: SliverMainAxisGroup(
             slivers: [
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -359,7 +359,7 @@ class _AppsTabState extends State<AppsTab> {
                             onStop: () => _confirmStop(app),
                             onUninstall: () => _confirmUninstall(app),
                           ),
-                          if (!isLast) const Divider(color: AppColors.border, height: 16),
+                          if (!isLast) Divider(color: AppColors.border, height: 16),
                         ],
                       ),
                     );
@@ -383,20 +383,20 @@ class _PlatformUnsupportedNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.info_outline, color: AppColors.muted, size: 28),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               'iOS henüz desteklenmiyor',
               style: TextStyle(color: AppColors.text, fontSize: 14, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
             Text(
               'iOS, üçüncü parti uygulamaların yüklü uygulama listesini '
               'okumasına izin vermiyor; bu yüzden "Uygulamalar" sekmesi bu '
@@ -443,20 +443,20 @@ class _AppTile extends StatelessWidget {
                   app.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.text, fontSize: 14),
+                  style: TextStyle(color: AppColors.text, fontSize: 14),
                 ),
                 Text(
                   app.packageName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                  style: TextStyle(color: AppColors.muted, fontSize: 11),
                 ),
               ],
             ),
           ),
           if (busy)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: SizedBox(
                 width: 20,
                 height: 20,
@@ -491,7 +491,7 @@ class _AppIcon extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppColors.border),
         ),
-        child: const Icon(Icons.apps, color: AppColors.muted, size: 18),
+        child: Icon(Icons.apps, color: AppColors.muted, size: 18),
       );
     }
     return ClipRRect(
