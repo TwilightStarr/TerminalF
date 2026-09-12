@@ -29,6 +29,11 @@ dependencies:
                                  # bu yuzden ek bir Android/iOS izni gerekmez
                                  # (bkz. README > YGL ve > "sinirlar")
 
+  # --- "Android Araclari" (winutil uyarlamasi) icin eklenenler ---
+  http: ^1.2.2                  # Opsiyonel uzak tweak/JSON yapilandirmasi cekme
+  app_settings: ^5.1.1          # Kok gerektirmeyen gercek sistem ayar ekrani kisayollari
+  url_launcher: ^6.3.1          # Onerilen uygulamalarin F-Droid/GitHub baglantilarini acma
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -38,6 +43,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/icon.svg
+    - assets/config/
 
 # NOT: Surumler bu dosyanin yazildigi tarih itibariyla guncel kararli
 # surumlerdir. `flutter pub get` calistirdiktan sonra `flutter pub
