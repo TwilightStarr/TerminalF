@@ -128,22 +128,22 @@ class _WinUtilSectionState extends State<WinUtilSection> {
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.border),
         ),
-        title: Text(tweak.title, style: const TextStyle(color: AppColors.text)),
+        title: Text(tweak.title, style: TextStyle(color: AppColors.text)),
         content: Text(
           '${tweak.description}\n\nBu işlem bazı sistem bileşenlerini '
           'etkileyebilir. Devam etmek istiyor musunuz?',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          style: TextStyle(color: AppColors.muted, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Vazgeç', style: TextStyle(color: AppColors.muted)),
+            child: Text('Vazgeç', style: TextStyle(color: AppColors.muted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Uygula', style: TextStyle(color: AppColors.warn)),
+            child: Text('Uygula', style: TextStyle(color: AppColors.warn)),
           ),
         ],
       ),
@@ -180,8 +180,8 @@ class _WinUtilSectionState extends State<WinUtilSection> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
         child: Center(child: CircularProgressIndicator(color: AppColors.accentCyan)),
       );
     }
@@ -218,7 +218,7 @@ class _WinUtilSectionState extends State<WinUtilSection> {
         TerminalCard(
           title: '› UZAKTAN YAPILANDIRMA (OPSİYONEL)',
           children: [
-            const Text(
+            Text(
               'Varsayılan olarak uygulama ile birlikte gelen yerel tweak '
               'listesi kullanılır. İsterseniz aynı şemaya sahip bir JSON '
               'adresinden güncel bir liste çekebilirsiniz.',
@@ -230,25 +230,25 @@ class _WinUtilSectionState extends State<WinUtilSection> {
                 Expanded(
                   child: TextField(
                     controller: _remoteUrlController,
-                    style: const TextStyle(color: AppColors.text, fontSize: 13),
+                    style: TextStyle(color: AppColors.text, fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'https://.../tweaks.json',
-                      hintStyle: const TextStyle(color: AppColors.muted),
+                      hintStyle: TextStyle(color: AppColors.muted),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       filled: true,
                       fillColor: AppColors.background,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderSide: BorderSide(color: AppColors.border),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderSide: BorderSide(color: AppColors.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.accentCyan),
+                        borderSide: BorderSide(color: AppColors.accentCyan),
                       ),
                     ),
                   ),
@@ -278,7 +278,7 @@ class _WinUtilSectionState extends State<WinUtilSection> {
                     onRun: () => _toggleTweak(tweak, true),
                   ),
                   if (tweak != byCategory[category]!.last)
-                    const Divider(color: AppColors.border, height: 18),
+                    Divider(color: AppColors.border, height: 18),
                 ],
               ],
             ),
@@ -303,7 +303,7 @@ class _WinUtilSectionState extends State<WinUtilSection> {
             children: [
               for (final app in byCategory[key]!) ...[
                 _AppLinkTile(app: app, onTap: () => _openApp(app)),
-                if (app != byCategory[key]!.last) const Divider(color: AppColors.border, height: 18),
+                if (app != byCategory[key]!.last) Divider(color: AppColors.border, height: 18),
               ],
             ],
           ),
@@ -316,7 +316,7 @@ class _WinUtilSectionState extends State<WinUtilSection> {
     return TerminalCard(
       title: '› HIZLI AYAR KISAYOLLARI',
       children: [
-        const Text(
+        Text(
           'Bu kısayollar kök gerektirmez; doğrudan ilgili sistem ayarları '
           'ekranını açar.',
           style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.4),
@@ -405,11 +405,11 @@ class _TweakTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tweak.title, style: const TextStyle(color: AppColors.text, fontSize: 14)),
+                Text(tweak.title, style: TextStyle(color: AppColors.text, fontSize: 14)),
                 const SizedBox(height: 2),
                 Text(
                   tweak.description,
-                  style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.3),
+                  style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.3),
                 ),
               ],
             ),
@@ -418,7 +418,7 @@ class _TweakTile extends StatelessWidget {
           SizedBox(
             width: 64,
             child: busy
-                ? const Center(
+                ? Center(
                     child: SizedBox(
                       width: 18,
                       height: 18,
@@ -457,9 +457,9 @@ class _AppLinkTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(app.name, style: const TextStyle(color: AppColors.text, fontSize: 14)),
+                Text(app.name, style: TextStyle(color: AppColors.text, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text(app.description, style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.3)),
+                Text(app.description, style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.3)),
               ],
             ),
           ),
@@ -494,9 +494,9 @@ class _ShortcutChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.settings_suggest, color: AppColors.accentCyan, size: 16),
+                Icon(Icons.settings_suggest, color: AppColors.accentCyan, size: 16),
                 const SizedBox(width: 8),
-                Text(feature.title, style: const TextStyle(color: AppColors.text, fontSize: 13)),
+                Text(feature.title, style: TextStyle(color: AppColors.text, fontSize: 13)),
               ],
             ),
           ),
@@ -562,7 +562,7 @@ class _ConsolePanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Text(
               line,
-              style: const TextStyle(color: AppColors.accent, fontSize: 11, fontFamily: 'monospace'),
+              style: TextStyle(color: AppColors.accent, fontSize: 11, fontFamily: 'monospace'),
             ),
           );
         },
