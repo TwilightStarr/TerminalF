@@ -1,8 +1,6 @@
-# Terminal — Cihaz ve Sistem Bilgi Paneli (Flutter Sürümü)
+# Terminal — Cihaz ve Sistem Bilgi Paneli
 
-Bu proje, aynı isimli **Godot 4** uygulamasının Flutter'a taşınmış temelidir (foundation). Konu tamamen aynı kaldı: **AMOLED ekranlara özel** (tam siyah zemin + neon vurgular) bir cihaz/sistem bilgi paneli. Godot sürümünde arayüz tek bir `Main.gd` scriptinde kod ile kuruluyordu; burada aynı yaklaşım korunarak iş Dart tarafında **servis / widget / sekme** katmanlarına bölündü — daha kolay test edilebilir ve genişletilebilir olması için.
-
-> Orijinal Godot projesi `godot_original/` altında referans olarak saklanmıyor; bu depo sıfırdan kurulmuş bir Flutter projesidir. Godot sürümündeki mantığın nereye taşındığını görmek isterseniz kod içindeki Türkçe yorumlarda ilgili Godot fonksiyon adlarına (`_refresh_dynamic_info()`, `_battery_accent_color()` vb.) atıf var.
+> **Sürüm:** 0.1 beta
 
 ## Neler var? (temel sürüm)
 
@@ -307,6 +305,7 @@ yüzden bilinçli olarak ertelendi — bkz. aşağıdaki "Sıradaki adımlar".
 - [Yapıldı] **iOS'a özel platform bildirimi**: `installed_apps` iOS'ta desteklenmediği için "Uygulamalar" sekmesi artık yanıltıcı "Uygulama bulunamadı." yerine dürüst bir platform açıklaması gösteriyor
 - [Yapıldı] **Pil tahmini matematiğinin test edilebilir hale getirilmesi**: `estimateRemainingDuration()` `lib/utils/battery_math.dart`'a çıkarıldı, `BatteryService` ona delege ediyor
 - [Yapıldı] **Birim/widget testlerinin genişletilmesi**: `formatBytes`, `formatDuration`, `FpsCounter` sözleşmesi, sekme geçişleri ve `estimateRemainingDuration()` için testler eklendi (`test/format_utils_test.dart`, `test/fps_counter_test.dart`, `test/battery_math_test.dart`, `test/widget_test.dart`) — `StorageService.clearCache()` ve izin akışları için testler bilinçli olarak ertelendi (bkz. yukarıdaki "Bilinçli olarak yapılmayanlar" notu)
+- [Yapıldı] **Ekran sekmesi ölçüm düzeltmesi**: "Çözünürlük" artık mantıksal (dp) yerine gerçek fiziksel piksel değerini gösteriyor ve `MediaQuery` bağımlılığıyla döndürme/katlama gibi metrik değişikliklerinde otomatik güncelleniyor (`lib/tabs/device_tab.dart`)
 
 ### Sıradaki adımlar (öncelik sırasıyla, henüz yapılmadı)
 

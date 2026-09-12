@@ -12,13 +12,13 @@ class DeviceTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ekran bilgisi icin dart:ui'nin Display API'si kullaniliyor;
-    // ek bir paket gerekmiyor (Godot'taki DisplayServer cagrilarinin
-    // dogrudan karsiligi).
     final view = View.of(context);
-    final logicalSize = view.physicalSize / view.devicePixelRatio;
+    final mediaQuery = MediaQuery.of(context);
+    final devicePixelRatio = mediaQuery.devicePixelRatio;
+    final physicalWidth = (mediaQuery.size.width * devicePixelRatio).round();
+    final physicalHeight = (mediaQuery.size.height * devicePixelRatio).round();
     final refreshRate = view.display.refreshRate;
-    final approxDpi = (view.devicePixelRatio * 160).round();
+    final approxDpi = (devicePixelRatio * 160).round();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,13 +38,13 @@ class DeviceTab extends StatelessWidget {
           title: '› EKRAN',
           delay: const Duration(milliseconds: 60),
           children: [
-            InfoRow(label: 'Çözünürlük', value: '${logicalSize.width.round()} x ${logicalSize.height.round()}'),
+            InfoRow(label: 'Çözünürlük', value: '$physicalWidth x $physicalHeight'),
             InfoRow(label: 'Yaklaşık DPI', value: '$approxDpi'),
             InfoRow(
               label: 'Yenileme Hızı',
               value: refreshRate > 0 ? '${refreshRate.round()} Hz' : 'Bilinmiyor',
             ),
-            InfoRow(label: 'Ölçek', value: '${view.devicePixelRatio.toStringAsFixed(2)}x'),
+            InfoRow(label: 'Ölçek', value: '${devicePixelRatio.toStringAsFixed(2)}x'),
           ],
         ),
       ],
