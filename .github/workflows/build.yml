@@ -25,30 +25,28 @@ jobs:
         run: |
           if [ -f "android/build.gradle.kts" ]; then
             cat >> android/build.gradle.kts << 'EOF'
-
-subprojects {
-    afterEvaluate {
-        if (project.plugins.hasPlugin("com.android.application") || project.plugins.hasPlugin("com.android.library")) {
-            project.extensions.findByName("android")?.withGroovyBuilder {
-                setProperty("compileSdkVersion", 36)
-            }
-        }
-    }
-}
-EOF
+          subprojects {
+              afterEvaluate {
+                  if (project.plugins.hasPlugin("com.android.application") || project.plugins.hasPlugin("com.android.library")) {
+                      project.extensions.findByName("android")?.withGroovyBuilder {
+                          setProperty("compileSdkVersion", 36)
+                      }
+                  }
+              }
+          }
+          EOF
           elif [ -f "android/build.gradle" ]; then
             cat >> android/build.gradle << 'EOF'
-
-subprojects {
-    afterEvaluate { proj ->
-        if (proj.plugins.hasPlugin("com.android.application") || proj.plugins.hasPlugin("com.android.library")) {
-            proj.android {
-                compileSdkVersion 36
-            }
-        }
-    }
-}
-EOF
+          subprojects {
+              afterEvaluate { proj ->
+                  if (proj.plugins.hasPlugin("com.android.application") || proj.plugins.hasPlugin("com.android.library")) {
+                      proj.android {
+                          compileSdkVersion 36
+                      }
+                  }
+              }
+          }
+          EOF
           fi
 
           if [ -f "android/app/build.gradle.kts" ]; then
