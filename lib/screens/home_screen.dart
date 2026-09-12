@@ -443,6 +443,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
 class _RefreshButton extends StatelessWidget {
   const _RefreshButton({required this.onTap});
 
