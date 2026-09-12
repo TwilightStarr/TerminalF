@@ -65,14 +65,14 @@ class _TerminalCardState extends State<TerminalCard> with SingleTickerProviderSt
           children: [
             Text(
               widget.title,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.accentCyan,
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
               ),
             ),
-            const Divider(color: AppColors.border, height: 18),
+            Divider(color: AppColors.border, height: 18),
             ...widget.children,
           ],
         ),
