@@ -14,7 +14,7 @@
 - **Kontroller**: ekranı açık tutma anahtarı (`wakelock_plus`, tercih `shared_preferences` ile kalıcı), **ekran parlaklığı yönetimi** (`screen_brightness`, uygulama-seviyesi, tercih kalıcı), titreşim testi (`vibration`), "Gerekli İzinleri İste" butonu (`permission_handler`).
 - **Uygulamalar** *(yeni sekme, Godot çekirdeğinde karşılığı yok)*: cihazdaki yüklü uygulamaları listeler (`installed_apps`, arama + sistem uygulamalarını gösterme anahtarı ile), her biri için **Aç**, **Durdur** (sistemin gerçek "Zorla Durdur" ekranını açar) ve **Kaldır** (gerçek kaldırma) eylemleri sunar. Android'in üçüncü parti uygulamalara diğer uygulamaların anlık RAM kullanımını okumayı veya onları doğrudan durdurmayı yasakladığı ekranda açıkça belirtilir — bkz. "sınırlar" bölümü.
 - **Üst çubuk**: manuel yenileme butonu, son güncelleme saati, her sekmede görünen kompakt pil rozeti.
-- **AMOLED tema**: tek `ThemeData` kaynağı (`lib/core/theme/`), Godot paletiyle birebir aynı renk kodları.
+- **AMOLED tema**: tek `ThemeData` kaynağı (`lib/core/theme/`), renk kodları.
 
 Veriler saniyede bir otomatik güncellenir; bir sekmeye her geçişte o sekmenin kartları sırayla belirerek (fade-in) görünür — Godot'taki `_animate_section_cards()` davranışının birebir karşılığı.
 
