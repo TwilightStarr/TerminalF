@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Uygulamanin tek `ThemeData` kaynagi. AMOLED tema disinda alternatif
-/// bir tema (ac.k mod vb.) bilincli olarak sunulmuyor - proje tamamen
-/// AMOLED cihazlar icin tasarlaniyor (bkz. README).
+/// Uygulamanin tek `ThemeData` kaynagi. Renkler [AppColors] uzerinden
+/// okunuyor; secili temaya gore degistigi icin (bkz. `app_colors.dart`
+/// > `AppThemeName`) burasi her tema degisiminde yeniden olusturuluyor
+/// (bkz. `main.dart`).
 class AppTheme {
   AppTheme._();
 
@@ -15,13 +16,13 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       canvasColor: AppColors.background,
       fontFamily: 'monospace',
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.dark(
         surface: AppColors.background,
         primary: AppColors.accent,
         secondary: AppColors.accentCyan,
         error: AppColors.danger,
       ),
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         bodyLarge: TextStyle(color: AppColors.text),
         bodyMedium: TextStyle(color: AppColors.text),
         bodySmall: TextStyle(color: AppColors.muted),
@@ -39,7 +40,7 @@ class AppTheme {
       splashColor: AppColors.accent.withOpacity(0.08),
       highlightColor: Colors.transparent,
       dividerColor: AppColors.border,
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
+      progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.accent,
         linearTrackColor: AppColors.border,
       ),
