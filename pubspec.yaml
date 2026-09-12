@@ -18,7 +18,7 @@ dependencies:
   path_provider: ^2.1.5         # OS.get_user_data_dir karsiligi
   shared_preferences: ^2.3.3    # ConfigFile (user://terminal_settings.cfg) karsiligi
   wakelock_plus: ^1.2.8         # DisplayServer.screen_set_keep_on karsiligi
-  vibration: ^2.0.1             # Input.vibrate_handheld karsiligi
+  vibration: ^3.1.3             # Input.vibrate_handheld karsiligi
   permission_handler: ^11.3.1   # OS.request_permissions karsiligi
   installed_apps: ^2.0.0        # Godot cekirdeginde karsiligi yok - yuklu
                                  # uygulamalari listeleme/yonetme (Android only,
