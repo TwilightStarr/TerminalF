@@ -1,0 +1,92 @@
+[
+  {
+    "id": "debloat_facebook_stubs",
+    "title": "Facebook Sistem Bileşenlerini Kapat",
+    "description": "Bazı üreticilerin fabrika çıkışlı yüklediği Facebook App Manager/Services/System bileşenlerini devre dışı bırakır. Facebook uygulamasını kullanmıyorsanız güvenlidir.",
+    "category": "debloat",
+    "applyCommand": "pm disable-user --user 0 com.facebook.appmanager; pm disable-user --user 0 com.facebook.services; pm disable-user --user 0 com.facebook.system",
+    "revertCommand": "pm enable com.facebook.appmanager; pm enable com.facebook.services; pm enable com.facebook.system",
+    "requiresRoot": true,
+    "dangerous": true
+  },
+  {
+    "id": "debloat_google_feedback",
+    "title": "Google Geri Bildirim Ajanını Kapat",
+    "description": "Çökme/hata raporlarını Google'a gönderen arka plan servisini devre dışı bırakır.",
+    "category": "debloat",
+    "applyCommand": "pm disable-user --user 0 com.google.android.feedback",
+    "revertCommand": "pm enable com.google.android.feedback",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "debloat_onetime_initializer",
+    "title": "GMS Tek Seferlik Başlatıcıyı Kapat",
+    "description": "İlk kurulumdan sonra tekrar çalışmasına gerek kalmayan Google Play Hizmetleri ilk kurulum bileşenini devre dışı bırakır.",
+    "category": "debloat",
+    "applyCommand": "pm disable-user --user 0 com.google.android.onetimeinitializer",
+    "revertCommand": "pm enable com.google.android.onetimeinitializer",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "performance_disable_animations",
+    "title": "Sistem Animasyonlarını Kapat",
+    "description": "Pencere, geçiş ve animatör ölçeklerini 0 yaparak arayüzü daha hızlı hissettirir.",
+    "category": "performance",
+    "applyCommand": "settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0",
+    "revertCommand": "settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "performance_force_gpu_rendering",
+    "title": "GPU ile Zorla Render Et",
+    "description": "2B çizimlerde de GPU hızlandırmasını zorlar (Geliştirici Seçenekleri > Force GPU rendering ile aynı ayar).",
+    "category": "performance",
+    "applyCommand": "settings put global force_gpu_rendering 1",
+    "revertCommand": "settings put global force_gpu_rendering 0",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "performance_kill_background",
+    "title": "Arka Plan Uygulamalarını Temizle",
+    "description": "Şu anda arka planda çalışan uygulamaları sonlandırır (tek seferlik eylem, RAM'i anlık olarak boşaltır).",
+    "category": "performance",
+    "applyCommand": "am kill-all",
+    "revertCommand": null,
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "privacy_limit_ad_tracking",
+    "title": "Reklam Takibini Sınırla",
+    "description": "Kişiselleştirilmiş reklamlar için kullanılan reklam kimliği takibini sınırlar.",
+    "category": "privacy",
+    "applyCommand": "settings put global limit_ad_tracking 1",
+    "revertCommand": "settings put global limit_ad_tracking 0",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "privacy_disable_error_reports",
+    "title": "Otomatik Hata Raporlarını Kapat",
+    "description": "Uygulama çökmelerinde sistemin otomatik olarak Google'a hata raporu göndermesini engeller.",
+    "category": "privacy",
+    "applyCommand": "settings put secure send_action_app_error 0",
+    "revertCommand": "settings put secure send_action_app_error 1",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "privacy_disable_always_scanning",
+    "title": "Sürekli Wi-Fi/Bluetooth Taramasını Kapat",
+    "description": "Wi-Fi veya Bluetooth kapalıyken bile konum doğruluğu için yapılan sürekli tarama davranışını devre dışı bırakır.",
+    "category": "privacy",
+    "applyCommand": "settings put global wifi_scan_always_enabled 0; settings put global ble_scan_always_enabled 0",
+    "revertCommand": "settings put global wifi_scan_always_enabled 1; settings put global ble_scan_always_enabled 1",
+    "requiresRoot": true,
+    "dangerous": false
+  }
+]
