@@ -21,8 +21,36 @@ jobs:
             flutter create --platforms=android --project-name terminal_flutter --org com.example .
           fi
 
-      - name: Android SDK surumunu yukselt
+      - name: Tum alt projelerin (pluginler dahil) compileSdk surumunu zorla yukselt
         run: |
+          if [ -f "android/build.gradle.kts" ]; then
+            cat >> android/build.gradle.kts << 'EOF'
+
+subprojects {
+    afterEvaluate {
+        if (project.plugins.hasPlugin("com.android.application") || project.plugins.hasPlugin("com.android.library")) {
+            project.extensions.findByName("android")?.withGroovyBuilder {
+                setProperty("compileSdkVersion", 36)
+            }
+        }
+    }
+}
+EOF
+          elif [ -f "android/build.gradle" ]; then
+            cat >> android/build.gradle << 'EOF'
+
+subprojects {
+    afterEvaluate { proj ->
+        if (proj.plugins.hasPlugin("com.android.application") || proj.plugins.hasPlugin("com.android.library")) {
+            proj.android {
+                compileSdkVersion 36
+            }
+        }
+    }
+}
+EOF
+          fi
+
           if [ -f "android/app/build.gradle.kts" ]; then
             sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts
             sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 34/' android/app/build.gradle.kts
