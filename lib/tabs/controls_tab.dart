@@ -45,6 +45,8 @@ class ControlsTab extends StatelessWidget {
     required this.tabs,
     required this.defaultTabId,
     required this.onDefaultTabChanged,
+    required this.themeName,
+    required this.onThemeChanged,
   });
 
   final bool keepScreenOn;
@@ -78,6 +80,9 @@ class ControlsTab extends StatelessWidget {
   final String defaultTabId;
   final ValueChanged<String> onDefaultTabChanged;
 
+  final AppThemeName themeName;
+  final ValueChanged<AppThemeName> onThemeChanged;
+
   static const _vibrationOptions = [
     (label: 'Kısa', ms: 100),
     (label: 'Orta', ms: 300),
@@ -91,22 +96,22 @@ class ControlsTab extends StatelessWidget {
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.border),
         ),
-        title: const Text('Önbelleği Temizle?', style: TextStyle(color: AppColors.text)),
+        title: Text('Önbelleği Temizle?', style: TextStyle(color: AppColors.text)),
         content: Text(
           'Geçici önbellek verisi (${formatBytes(cacheBytes)}) silinecek. '
           'Kalıcı uygulama verileriniz ve tercihleriniz etkilenmez.',
-          style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          style: TextStyle(color: AppColors.muted, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Vazgeç', style: TextStyle(color: AppColors.muted)),
+            child: Text('Vazgeç', style: TextStyle(color: AppColors.muted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Temizle', style: TextStyle(color: AppColors.danger)),
+            child: Text('Temizle', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -139,7 +144,7 @@ class ControlsTab extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text('Ekranı Açık Tut', style: TextStyle(color: AppColors.muted, fontSize: 14)),
                 ),
                 Switch(value: keepScreenOn, onChanged: onKeepScreenOnChanged),
@@ -154,7 +159,7 @@ class ControlsTab extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.brightness_low, color: AppColors.muted, size: 18),
+                Icon(Icons.brightness_low, color: AppColors.muted, size: 18),
                 Expanded(
                   child: SliderTheme(
                     data: SliderThemeData(
@@ -172,7 +177,7 @@ class ControlsTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(Icons.brightness_high, color: AppColors.muted, size: 18),
+                Icon(Icons.brightness_high, color: AppColors.muted, size: 18),
               ],
             ),
             Row(
@@ -180,13 +185,13 @@ class ControlsTab extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '%${(clampedBrightness * 100).round()}',
-                    style: const TextStyle(color: AppColors.text, fontSize: 13),
+                    style: TextStyle(color: AppColors.text, fontSize: 13),
                   ),
                 ),
                 TextButton(
                   style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
                   onPressed: onResetBrightness,
-                  child: const Text(
+                  child: Text(
                     'Sistem Değerine Sıfırla',
                     style: TextStyle(color: AppColors.accentCyan, fontSize: 12),
                   ),
@@ -194,7 +199,7 @@ class ControlsTab extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Yalnızca Terminal ön plandayken etkilidir; uygulama arka '
               'plana alınınca ekran sistemin genel parlaklığına döner.',
               style: TextStyle(color: AppColors.muted, fontSize: 11, height: 1.3),
@@ -206,7 +211,7 @@ class ControlsTab extends StatelessWidget {
           title: '› TİTREŞİM YÖNETİMİ',
           delay: const Duration(milliseconds: 80),
           children: [
-            const Text('Süre', style: TextStyle(color: AppColors.muted, fontSize: 13)),
+            Text('Süre', style: TextStyle(color: AppColors.muted, fontSize: 13)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -233,7 +238,7 @@ class ControlsTab extends StatelessWidget {
           children: [
             for (final row in permissionRows) ...[
               _PermissionTile(row: row),
-              if (row != permissionRows.last) const Divider(color: AppColors.border, height: 16),
+              if (row != permissionRows.last) Divider(color: AppColors.border, height: 16),
             ],
             const SizedBox(height: 12),
             _ControlButton(
@@ -256,10 +261,10 @@ class ControlsTab extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text('Önbellek Boyutu', style: TextStyle(color: AppColors.muted, fontSize: 14)),
                 ),
-                Text(formatBytes(cacheBytes), style: const TextStyle(color: AppColors.text, fontSize: 14)),
+                Text(formatBytes(cacheBytes), style: TextStyle(color: AppColors.text, fontSize: 14)),
               ],
             ),
             const SizedBox(height: 12),
@@ -275,12 +280,39 @@ class ControlsTab extends StatelessWidget {
           title: '› BAŞLANGIÇ SEKMESİ',
           delay: const Duration(milliseconds: 200),
           children: [
-            const Text(
+            Text(
               'Uygulama açılışında hangi sekmenin gösterileceğini seçin.',
               style: TextStyle(color: AppColors.muted, fontSize: 12),
             ),
             const SizedBox(height: 10),
             SegmentedTabBar(tabs: tabs, activeId: defaultTabId, onChanged: onDefaultTabChanged),
+          ],
+        ),
+        const SizedBox(height: 18),
+        TerminalCard(
+          title: '› TEMA',
+          delay: const Duration(milliseconds: 240),
+          children: [
+            Text(
+              'Görünümü seçin. Seçtiğiniz tema bir sonraki açılışta da '
+              'aynı şekilde karşılar.',
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                for (final option in AppThemeName.values) ...[
+                  Expanded(
+                    child: _ChoiceChip(
+                      label: option.label,
+                      selected: themeName == option,
+                      onTap: () => onThemeChanged(option),
+                    ),
+                  ),
+                  if (option != AppThemeName.values.last) const SizedBox(width: 8),
+                ],
+              ],
+            ),
           ],
         ),
       ],
@@ -334,7 +366,7 @@ class _PermissionTile extends StatelessWidget {
         children: [
           Expanded(
             flex: 3,
-            child: Text(row.label, style: const TextStyle(color: AppColors.text, fontSize: 14)),
+            child: Text(row.label, style: TextStyle(color: AppColors.text, fontSize: 14)),
           ),
           Expanded(
             flex: 2,
@@ -346,11 +378,11 @@ class _PermissionTile extends StatelessWidget {
           SizedBox(
             width: 64,
             child: isGranted
-                ? const Icon(Icons.check_circle, color: AppColors.accent, size: 20)
+                ? Icon(Icons.check_circle, color: AppColors.accent, size: 20)
                 : TextButton(
                     style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(56, 32)),
                     onPressed: row.onRequest,
-                    child: const Text('İste', style: TextStyle(color: AppColors.accentCyan, fontSize: 12)),
+                    child: Text('İste', style: TextStyle(color: AppColors.accentCyan, fontSize: 12)),
                   ),
           ),
         ],
