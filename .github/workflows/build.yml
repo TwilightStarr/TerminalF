@@ -29,13 +29,15 @@ jobs:
       - name: 1. deneme - normal build
         id: build1
         continue-on-error: true
-        run: flutter build apk --release 2>&1 | tee /tmp/build1.log
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee /tmp/build1.log
 
       - name: Gerekirse SDK surumunu otomatik yukselt ve tekrar dene
         id: fix_and_retry
         if: steps.build1.outcome == 'failure'
         run: |
-          set -e
+          set -o pipefail
           SDKMANAGER=/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager
           REQUIRED=$(grep -oE 'version [0-9]+ or later' /tmp/build1.log | grep -oE '[0-9]+' | sort -rn | head -1)
           if [ -z "$REQUIRED" ]; then
@@ -91,8 +93,16 @@ jobs:
           name: hata-loglari
           path: /tmp/hata-loglari
 
-      - name: APK'yi yukle (basariliysa)
-        if: success()
+      - name: Derlenen APK dosyasini kontrol et
+        run: |
+          if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            echo "APK dosyasi bulunamadi, build gercekte basarisiz olmus olabilir."
+            exit 1
+          fi
+          echo "APK dosyasi bulundu, boyutu:"
+          ls -la build/app/outputs/flutter-apk/app-release.apk
+
+      - name: APK'yi yukle
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
