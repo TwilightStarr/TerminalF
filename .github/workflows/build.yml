@@ -24,43 +24,66 @@ jobs:
       - name: Tum alt projelerin (pluginler dahil) compileSdk surumunu zorla yukselt
         run: |
           if [ -f "android/build.gradle.kts" ]; then
-            cat >> android/build.gradle.kts << 'EOF'
-          subprojects {
-              val applyCompileSdkOverride: () -> Unit = {
-                  if (project.plugins.hasPlugin("com.android.application") || project.plugins.hasPlugin("com.android.library")) {
-                      project.extensions.findByName("android")?.withGroovyBuilder {
-                          setProperty("compileSdkVersion", 36)
-                      }
-                  }
-              }
-              if (project.state.executed) {
-                  applyCompileSdkOverride()
-              } else {
-                  afterEvaluate { applyCompileSdkOverride() }
-              }
-          }
-          EOF
+            {
+              echo 'subprojects {'
+              echo '    val applyCompileSdkOverride: () -> Unit = {'
+              echo '        if (project.plugins.hasPlugin("com.android.application") || project.plugins.hasPlugin("com.android.library")) {'
+              echo '            project.extensions.findByName("android")?.withGroovyBuilder {'
+              echo '                setProperty("compileSdkVersion", 36)'
+              echo '            }'
+              echo '        }'
+              echo '    }'
+              echo '    if (project.state.executed) {'
+              echo '        applyCompileSdkOverride()'
+              echo '    } else {'
+              echo '        afterEvaluate { applyCompileSdkOverride() }'
+              echo '    }'
+              echo '}'
+            } >> android/build.gradle.kts
           elif [ -f "android/build.gradle" ]; then
-            cat >> android/build.gradle << 'EOF'
-          subprojects {
-              def applyCompileSdkOverride = {
-                  if (project.plugins.hasPlugin('com.android.application') || project.plugins.hasPlugin('com.android.library')) {
-                      project.android {
-                          compileSdkVersion 36
-                      }
-                  }
-              }
-              if (project.state.executed) {
-                  applyCompileSdkOverride()
-              } else {
-                  afterEvaluate { applyCompileSdkOverride() }
-              }
-          }
-          EOF
+            {
+              echo 'subprojects {'
+              echo '    def applyCompileSdkOverride = {'
+              echo "        if (project.plugins.hasPlugin('com.android.application') || project.plugins.hasPlugin('com.android.library')) {"
+              echo '            project.android {'
+              echo '                compileSdkVersion 36'
+              echo '            }'
+              echo '        }'
+              echo '    }'
+              echo '    if (project.state.executed) {'
+              echo '        applyCompileSdkOverride()'
+              echo '    } else {'
+              echo '        afterEvaluate { applyCompileSdkOverride() }'
+              echo '    }'
+              echo '}'
+            } >> android/build.gradle
           fi
 
           if [ -f "android/app/build.gradle.kts" ]; then
             sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts
             sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 34/' android/app/build.gradle.kts
           elif [ -f "android/app/build.gradle" ]; then
-            sed -i 's/c
+            sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 36/' android/app/build.gradle
+            sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/' android/app/build.gradle
+          fi
+
+      - name: Uygulama adini TerminalF yap
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="TerminalF"/' android/app/src/main/AndroidManifest.xml
+
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - name: Derlenen APK dosyasini kontrol et
+        run: |
+          if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            echo "APK bulunamadi!"
+            exit 1
+          fi
+          ls -la build/app/outputs/flutter-apk/app-release.apk
+
+      - name: APK'yi yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
