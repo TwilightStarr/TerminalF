@@ -89,6 +89,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _vibrationDurationMs = 300;
   String _defaultTabId = 'overview';
 
+  /// Kullanıcının seçtiği tema; her açılışta [SettingsService] üzerinden
+  /// kalıcı hâlde okunur (bkz. `_bootstrap`), değiştirildiğinde de aynı
+  /// yere yazılır (bkz. `_onThemeChanged`).
+  AppThemeName _themeName = AppColors.themeName;
+
   @override
   void initState() {
     super.initState();
@@ -119,12 +124,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final brightness = await _bootstrapBrightness();
     await _loadPermissionStatuses();
 
+    // Tema `main.dart` içinde `runApp()`'tan önce zaten uygulandı; burada
+    // sadece Kontroller sekmesindeki seçim arayüzünün doğru seçili
+    // görünmesi için mevcut değeri okuyoruz.
+    final themeName = AppColors.themeName;
+
     if (mounted) {
       setState(() {
         _keepScreenOn = keepOn;
         _vibrationDurationMs = vibrationMs;
         _defaultTabId = defaultTab;
         _activeTab = defaultTab;
+        _themeName = themeName;
         if (brightness != null) _brightness = brightness;
       });
     }
@@ -285,6 +296,15 @@ class _HomeScreenState extends State<HomeScreen> {
     await _settingsService.setDefaultTab(tabId);
   }
 
+  /// Temayı hem anında uygular (bkz. `AppColors.setTheme` -> `main.dart`
+  /// dinleyicisi) hem de bir sonraki açılışta aynı temanın karşılaması
+  /// için kalıcı depolar.
+  Future<void> _onThemeChanged(AppThemeName name) async {
+    setState(() => _themeName = name);
+    AppColors.setTheme(name);
+    await _settingsService.setThemeName(name.storageKey);
+  }
+
   String _permissionLabel(Permission permission) {
     switch (permission) {
       case Permission.notification:
@@ -341,6 +361,8 @@ class _HomeScreenState extends State<HomeScreen> {
           tabs: _tabs,
           defaultTabId: _defaultTabId,
           onDefaultTabChanged: _onDefaultTabChanged,
+          themeName: _themeName,
+          onThemeChanged: _onThemeChanged,
         );
       case 'overview':
       default:
@@ -366,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -379,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             letterSpacing: 1,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'Sistem ve Cihaz Bilgi Paneli',
                           style: TextStyle(color: AppColors.muted, fontSize: 16),
@@ -395,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 10),
               Text(
                 _lastUpdated == null ? 'Son güncelleme: -' : 'Son güncelleme: ${_formatTime(_lastUpdated!)}',
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                style: TextStyle(color: AppColors.muted, fontSize: 12),
               ),
               const SizedBox(height: 14),
               SegmentedTabBar(
@@ -462,11 +484,11 @@ class _RefreshButton extends StatelessWidget {
           width: 52,
           height: 52,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.fromBorderSide(BorderSide(color: AppColors.accentCyan)),
           ),
-          child: const Icon(Icons.refresh, color: AppColors.accentCyan, size: 22),
+          child: Icon(Icons.refresh, color: AppColors.accentCyan, size: 22),
         ),
       ),
     );
