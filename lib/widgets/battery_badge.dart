@@ -37,7 +37,7 @@ class BatteryBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             percent == null ? '--%' : '$percent%',
-            style: const TextStyle(color: AppColors.text, fontSize: 14),
+            style: TextStyle(color: AppColors.text, fontSize: 14),
           ),
         ],
       ),
