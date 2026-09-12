@@ -46,7 +46,7 @@ class InfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(color: AppColors.muted, fontSize: 14),
+            style: TextStyle(color: AppColors.muted, fontSize: 14),
           ),
         ),
         const SizedBox(width: 12),
@@ -60,7 +60,7 @@ class InfoRow extends StatelessWidget {
         ),
         if (copyable) ...[
           const SizedBox(width: 6),
-          const Icon(Icons.copy, size: 14, color: AppColors.muted),
+          Icon(Icons.copy, size: 14, color: AppColors.muted),
         ],
       ],
     );
