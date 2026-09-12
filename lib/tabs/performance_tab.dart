@@ -36,7 +36,7 @@ class PerformanceTab extends StatelessWidget {
             InfoRow(label: 'Zirve Bellek (RSS)', value: formatBytes(memory.peakRssBytes)),
             InfoRow(label: 'FPS', value: fps.round().toString()),
             const SizedBox(height: 8),
-            const Text('Son 30 Saniye', style: TextStyle(color: AppColors.muted, fontSize: 11)),
+            Text('Son 30 Saniye', style: TextStyle(color: AppColors.muted, fontSize: 11)),
             const SizedBox(height: 6),
             FpsGraph(history: fpsHistory),
           ],
