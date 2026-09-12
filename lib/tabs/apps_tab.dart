@@ -6,12 +6,24 @@ import 'package:installed_apps/app_info.dart';
 
 import '../core/theme/app_colors.dart';
 import '../services/apps_service.dart';
+import '../widgets/segmented_tab_bar.dart';
 import '../widgets/terminal_card.dart';
+import 'winutil_tab.dart';
 
 /// "Uygulamalar" sekmesi: cihazdaki yüklü uygulamaları listeler ve
 /// işletim sisteminin izin verdiği ölçüde **yönetir** (aç / durdurma
 /// ekranını aç / kaldır). Godot çekirdeğinde karşılığı olmayan, bu
 /// Flutter sürümüne özgü yeni bir sekmedir.
+///
+/// GÜNCELLEME: Sekme artık kendi içinde ikinci bir alt bölüm barındırıyor
+/// - "Android Araçları" (bkz. [WinUtilSection]): winutil'in (Chris Titus
+/// Tech) Windows tweak/debloat/uygulama önerisi mantığının Android
+/// uyarlaması. Ayrı bir üst-seviye sekme yerine burada gömülü olmasının
+/// sebebi, hem "uygulamalarla ilgili" doğal grubuna ait olması hem de
+/// `HomeScreen`'deki 5 sekmelik ana gezinmeyi şişirmemek (bkz.
+/// `home_screen.dart` > `_tabs`). Dahili geçiş [_innerSection] ile
+/// yönetilir; "Yüklü Uygulamalar" seçiliyken önceki davranış birebir
+/// korunur.
 ///
 /// Diğer sekmelerin aksine kendi veri yükünü kendi yönetir (tek seferlik,
 /// ağır bir liste okuması olduğu için ana ekranın 1 saniyelik döngüsüne
@@ -41,6 +53,12 @@ class AppsTab extends StatefulWidget {
 
 class _AppsTabState extends State<AppsTab> {
   final _service = AppsService();
+
+  static const _innerTabs = [
+    TerminalTabDef('installed', 'Yüklü Uygulamalar'),
+    TerminalTabDef('tools', 'Android Araçları'),
+  ];
+  String _innerSection = 'installed';
 
   bool _loading = true;
   bool _includeSystemApps = false;
@@ -159,6 +177,30 @@ class _AppsTabState extends State<AppsTab> {
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SegmentedTabBar(
+          tabs: _innerTabs,
+          activeId: _innerSection,
+          onChanged: (id) => setState(() => _innerSection = id),
+        ),
+        const SizedBox(height: 14),
+        Expanded(
+          child: _innerSection == 'tools'
+              ? const SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: 24),
+                  child: WinUtilSection(),
+                )
+              : _buildInstalledSection(),
+        ),
+      ],
+    );
+  }
+
+  /// Önceki sürümdeki `build()` içeriğinin birebir aynısı - "Yüklü
+  /// Uygulamalar" alt sekmesi seçiliyken gösterilir.
+  Widget _buildInstalledSection() {
     final apps = _filtered;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
