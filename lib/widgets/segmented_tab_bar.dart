@@ -54,7 +54,7 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = AppColors.accentCyan;
+    final accent = AppColors.accentCyan;
     return Material(
       color: active ? accent.withOpacity(0.16) : Colors.transparent,
       borderRadius: BorderRadius.circular(10),
