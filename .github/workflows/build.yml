@@ -21,6 +21,10 @@ jobs:
             flutter create --platforms=android --project-name terminal_flutter --org com.example .
           fi
 
+      - name: Uygulama adini TerminalF yap
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="TerminalF"/' android/app/src/main/AndroidManifest.xml
+
       - run: flutter pub get
       - run: flutter build apk --release
 

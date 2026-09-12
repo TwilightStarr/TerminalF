@@ -439,19 +439,10 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildActiveTab(),
-          const SizedBox(height: 24),
-          const Center(
-            child: Text(
-              'Terminal v0.1 (Flutter) — temel altyapı',
-              style: TextStyle(color: AppColors.border, fontSize: 11),
-            ),
-          ),
         ],
       ),
     );
   }
-}
-
 class _RefreshButton extends StatelessWidget {
   const _RefreshButton({required this.onTap});
 
