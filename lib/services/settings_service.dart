@@ -9,6 +9,7 @@ class SettingsService {
   static const _defaultTabKey = 'default_tab';
   static const _vibrationDurationMsKey = 'vibration_duration_ms';
   static const _brightnessKey = 'app_brightness';
+  static const _themeKey = 'app_theme';
 
   Future<bool> getKeepScreenOn() async {
     final prefs = await SharedPreferences.getInstance();
@@ -60,5 +61,18 @@ class SettingsService {
   Future<void> clearBrightness() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_brightnessKey);
+  }
+
+  /// Kullanıcının son seçtiği tema anahtarı ('amoled' / 'claude').
+  /// Hiç ayarlanmadıysa 'amoled' (varsayılan tema) döner - bkz.
+  /// `AppThemeCodec` (`core/theme/app_colors.dart`).
+  Future<String> getThemeName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_themeKey) ?? 'amoled';
+  }
+
+  Future<void> setThemeName(String themeKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeKey, themeKey);
   }
 }
