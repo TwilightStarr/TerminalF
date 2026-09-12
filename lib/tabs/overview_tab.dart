@@ -101,7 +101,7 @@ class OverviewTab extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Önbelleği yönetmek (temizlemek) için Kontroller sekmesine bakın.',
-              style: const TextStyle(color: AppColors.muted, fontSize: 11),
+              style: TextStyle(color: AppColors.muted, fontSize: 11),
             ),
           ],
         ),
