@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:battery_plus/battery_plus.dart';
+import 'package:thermal/thermal.dart';
 
 import '../utils/battery_math.dart';
 
@@ -7,7 +10,12 @@ import '../utils/battery_math.dart';
 /// `percent`, cihaz pil yuzdesini okuyamazsa `null` olur (Godot
 /// tarafinda `OS.get_power_percent_left() < 0` durumuna karsilik gelir).
 class BatteryReading {
-  const BatteryReading({required this.percent, required this.state, this.estimatedRemaining});
+  const BatteryReading({
+    required this.percent,
+    required this.state,
+    this.estimatedRemaining,
+    this.temperatureCelsius,
+  });
 
   final int? percent;
   final BatteryState state;
@@ -17,6 +25,12 @@ class BatteryReading {
   /// süre. Yeterli veri toplanmadıysa (uygulama yeni açıldıysa, yüzde
   /// henüz hiç değişmediyse) `null` olur - bkz. [BatteryService].
   final Duration? estimatedRemaining;
+
+  /// Pilin anlık sıcaklığı (°C). Godot çekirdeğinde ve `battery_plus`
+  /// paketinde karşılığı yok; `thermal` paketiyle okunuyor (yalnızca
+  /// Android - bkz. [BatteryService]). Akış henüz ilk değerini
+  /// yayınlamadıysa ya da platform desteklemiyorsa `null` olur.
+  final double? temperatureCelsius;
 
   static const BatteryReading unknown = BatteryReading(percent: null, state: BatteryState.unknown);
 }
@@ -39,17 +53,50 @@ class _BatterySample {
 /// hiçbir şey göstermemekten daha kullanışlıdır.
 class BatteryService {
   final Battery _battery = Battery();
+  final Thermal _thermal = Thermal();
   final List<_BatterySample> _history = [];
 
   static const _historyWindow = Duration(minutes: 15);
   static const _minElapsedForEstimate = Duration(seconds: 60);
+
+  /// `thermal` paketinin yayınladığı en son pil sıcaklığı. Bu, akış
+  /// (stream) tabanlı bir API olduğu için burada önbelleğe alınıp
+  /// `read()` içinde diğer tüm okumalarla (yüzde, durum) aynı 1
+  /// saniyelik poll döngüsüne uydurularak döndürülüyor.
+  double? _lastTemperatureCelsius;
+  StreamSubscription<double>? _temperatureSub;
+
+  BatteryService() {
+    try {
+      _temperatureSub = _thermal.onBatteryTemperatureChanged.listen(
+        (value) => _lastTemperatureCelsius = value,
+        onError: (_) {
+          // Platform desteklemiyorsa (ör. iOS, emülatör) sessizce yok say.
+        },
+        cancelOnError: false,
+      );
+    } catch (_) {
+      // Sessizce yok say - bkz. yukarıdaki yorum.
+    }
+  }
+
+  /// `HomeScreen.dispose()` içinden çağrılmalı - aksi halde sıcaklık
+  /// akışı arka planda dinlemeye devam eder.
+  void dispose() {
+    _temperatureSub?.cancel();
+  }
 
   Future<BatteryReading> read() async {
     try {
       final level = await _battery.batteryLevel;
       final state = await _battery.batteryState;
       _recordSample(level);
-      return BatteryReading(percent: level, state: state, estimatedRemaining: _estimateRemaining(state));
+      return BatteryReading(
+        percent: level,
+        state: state,
+        estimatedRemaining: _estimateRemaining(state),
+        temperatureCelsius: _lastTemperatureCelsius,
+      );
     } catch (_) {
       return BatteryReading.unknown;
     }
