@@ -106,6 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _timer?.cancel();
     _fpsCounter.stop();
+    _batteryService.dispose();
     super.dispose();
   }
 
