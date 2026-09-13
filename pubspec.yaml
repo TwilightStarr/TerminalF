@@ -13,6 +13,7 @@ dependencies:
 
   # --- Godot cekirdeginde hazir gelen, burada paketlerle karsilanan ozellikler ---
   battery_plus: ^6.2.1          # OS.get_power_state / get_power_percent_left karsiligi
+  thermal: ^1.1.12               # Pil sicakligi - battery_plus'ta karsiligi yok (yalnizca Android)
   device_info_plus: ^11.2.0     # OS.get_model_name / get_name / get_version karsiligi
   network_info_plus: ^5.0.3     # IP.get_local_addresses karsiligi
   path_provider: ^2.1.5         # OS.get_user_data_dir karsiligi
