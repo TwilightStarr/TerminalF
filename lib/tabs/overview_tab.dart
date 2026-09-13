@@ -54,6 +54,24 @@ class OverviewTab extends StatelessWidget {
     return '${formatDuration(remaining)} $suffix';
   }
 
+  /// `BatteryService`'in `thermal` paketinden okuduğu anlık pil
+  /// sıcaklığını okunabilir bir etikete çevirir. Akış henüz ilk
+  /// değerini yayınlamadıysa ya da platform desteklemiyorsa (ör. iOS)
+  /// "Bilinmiyor" gösterir.
+  String _temperatureLabel(double? celsius) {
+    if (celsius == null) return 'Bilinmiyor';
+    return '${celsius.toStringAsFixed(1)}°C';
+  }
+
+  /// Şarj yüzdesindeki kritik-renk mantığıyla aynı ruhta: pil ısındıkça
+  /// turuncuya, aşırı ısınmaya yaklaşınca kırmızıya döner.
+  Color? _temperatureColor(double? celsius) {
+    if (celsius == null) return null;
+    if (celsius >= 45) return AppColors.danger;
+    if (celsius >= 40) return AppColors.warn;
+    return null;
+  }
+
   Color _stateColor(BatteryState? state) {
     switch (state) {
       case BatteryState.charging:
@@ -88,6 +106,11 @@ class OverviewTab extends StatelessWidget {
             ),
             AccentProgressBar(value: (percent ?? 0) / 100.0, color: accent),
             InfoRow(label: 'Kalan Süre', value: _remainingLabel(battery)),
+            InfoRow(
+              label: 'Pil Sıcaklığı',
+              value: _temperatureLabel(battery?.temperatureCelsius),
+              valueColor: _temperatureColor(battery?.temperatureCelsius),
+            ),
           ],
         ),
         const SizedBox(height: 18),
