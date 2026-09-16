@@ -50,6 +50,36 @@
     "dangerous": false
   },
   {
+    "id": "performance_disable_adaptive_battery",
+    "title": "Adaptif Pil Kısıtlamalarını Kapat",
+    "description": "Sistemin nadiren kullandığınızı düşündüğü uygulamaları arka planda agresifçe kısıtlamasını (bekleme kovaları) durdurur. Bildirimlerin geç gelmesi/arka plan senkronunun gecikmesi gibi sorunları giderir; karşılığında pil ömründen biraz feragat edersiniz.",
+    "category": "performance",
+    "applyCommand": "settings put global adaptive_battery_management_enabled 0",
+    "revertCommand": "settings put global adaptive_battery_management_enabled 1",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "performance_force_peak_refresh_rate",
+    "title": "Ekranı Her Zaman Maksimum Hızda Tut",
+    "description": "Ekranın destekleyebileceği en yüksek yenileme hızını (ör. 90/120 Hz) her durumda zorlar, kaydırma ve animasyonlar daha akıcı/FPS'li hissettirir. Karşılığında pil tüketimi artar - performansı pilden önceliklendirenler için.",
+    "category": "performance",
+    "applyCommand": "settings put system peak_refresh_rate 120.0; settings put system min_refresh_rate 120.0",
+    "revertCommand": "settings delete system peak_refresh_rate; settings delete system min_refresh_rate",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "performance_cap_refresh_rate_battery",
+    "title": "Yenileme Hızını 60Hz'e Sabitle (Pil Tasarrufu)",
+    "description": "Ekranı sabit 60Hz'de tutarak yüksek yenileme hızının pil maliyetinden kaçınır. Yukarıdaki 'Maksimum Hızda Tut' tweak'inin tam tersidir - ikisini aynı anda açmayın, hangisini istiyorsanız yalnız onu açın.",
+    "category": "performance",
+    "applyCommand": "settings put system peak_refresh_rate 60.0; settings put system min_refresh_rate 60.0",
+    "revertCommand": "settings delete system peak_refresh_rate; settings delete system min_refresh_rate",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
     "id": "performance_kill_background",
     "title": "Arka Plan Uygulamalarını Temizle",
     "description": "Şu anda arka planda çalışan uygulamaları sonlandırır (tek seferlik eylem, RAM'i anlık olarak boşaltır).",
@@ -76,6 +106,16 @@
     "category": "privacy",
     "applyCommand": "settings put secure send_action_app_error 0",
     "revertCommand": "settings put secure send_action_app_error 1",
+    "requiresRoot": true,
+    "dangerous": false
+  },
+  {
+    "id": "debloat_print_recommendation",
+    "title": "Yazdırma Servis Önerisini Kapat",
+    "description": "Yazıcı bulunduğunda arka planda çalışıp uyumlu yazdırma servisi öneren, neredeyse kimsenin kullanmadığı sistem bileşenini devre dışı bırakır. Yazdırma yapmıyorsanız tamamen güvenli ve anında geri alınabilir.",
+    "category": "debloat",
+    "applyCommand": "pm disable-user --user 0 com.android.printservice.recommendation",
+    "revertCommand": "pm enable com.android.printservice.recommendation",
     "requiresRoot": true,
     "dangerous": false
   },
