@@ -34,6 +34,9 @@ dependencies:
   http: ^1.2.2                  # Opsiyonel uzak tweak/JSON yapilandirmasi cekme
   app_settings: ^5.1.1          # Kok gerektirmeyen gercek sistem ayar ekrani kisayollari
   url_launcher: ^6.3.1          # Onerilen uygulamalarin F-Droid/GitHub baglantilarini acma
+  shizuku_api: ^1.2.3           # Kok (root) olmayan cihazlarda tweak'leri
+                                 # Shizuku (ADB) uzerinden calistirmak icin -
+                                 # bkz. lib/services/shizuku_service.dart
 
 dev_dependencies:
   flutter_test:
