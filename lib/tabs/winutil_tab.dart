@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../models/tweak_model.dart';
+import '../services/shizuku_service.dart';
 import '../services/winutil_service.dart';
 import '../widgets/segmented_tab_bar.dart';
 import '../widgets/terminal_card.dart';
@@ -21,6 +22,7 @@ class WinUtilSection extends StatefulWidget {
 
 class _WinUtilSectionState extends State<WinUtilSection> {
   final _service = WinUtilService();
+  final _shizukuService = ShizukuService();
 
   static const _segments = [
     TerminalTabDef('tweaks', "Tweak'ler"),
@@ -31,6 +33,17 @@ class _WinUtilSectionState extends State<WinUtilSection> {
 
   bool _loading = true;
   bool? _hasRoot;
+  bool _shizukuRunning = false;
+  bool _shizukuPermitted = false;
+  bool _shizukuBusy = false;
+
+  /// Shizuku servisi çalışıyor VE izin verilmiş mi.
+  bool get _shizukuReady => _shizukuRunning && _shizukuPermitted;
+
+  /// Kök (root) VEYA Shizuku üzerinden komut çalıştırılabilir mi -
+  /// [_TweakTile]'ın kilit durumunu belirler.
+  bool get _privileged => (_hasRoot ?? false) || _shizukuReady;
+
   List<Tweak> _tweaks = const [];
   List<RecommendedApp> _apps = const [];
   List<FeatureShortcut> _features = const [];
@@ -65,6 +78,8 @@ class _WinUtilSectionState extends State<WinUtilSection> {
       _service.loadBundledApplications(),
       _service.loadBundledFeatures(),
       _service.hasRoot(),
+      _shizukuService.isRunning(),
+      _shizukuService.hasPermission(),
     ]);
     if (!mounted) return;
     setState(() {
@@ -72,8 +87,36 @@ class _WinUtilSectionState extends State<WinUtilSection> {
       _apps = results[1] as List<RecommendedApp>;
       _features = results[2] as List<FeatureShortcut>;
       _hasRoot = results[3] as bool;
+      _shizukuRunning = results[4] as bool;
+      _shizukuPermitted = results[5] as bool;
       _loading = false;
     });
+  }
+
+  /// Kullanıcıya Shizuku izin diyaloğunu gösterir ve sonucu arayüze yansıtır.
+  /// Kök zaten varsa çağrılmaz (bkz. `_PrivilegeStatusBanner`de düğmenin
+  /// yalnızca kök yokken gösterilmesi).
+  Future<void> _requestShizukuPermission() async {
+    setState(() => _shizukuBusy = true);
+    final running = await _shizukuService.isRunning();
+    if (!running) {
+      if (mounted) {
+        setState(() {
+          _shizukuRunning = false;
+          _shizukuBusy = false;
+        });
+        _showSnack('Shizuku servisi çalışmıyor. Önce Shizuku uygulamasını başlatın.');
+      }
+      return;
+    }
+    final granted = await _shizukuService.requestPermission();
+    if (!mounted) return;
+    setState(() {
+      _shizukuRunning = true;
+      _shizukuPermitted = granted;
+      _shizukuBusy = false;
+    });
+    _showSnack(granted ? 'Shizuku izni verildi.' : 'Shizuku izni reddedildi.');
   }
 
   void _log(String line) {
@@ -87,9 +130,11 @@ class _WinUtilSectionState extends State<WinUtilSection> {
   }
 
   Future<void> _toggleTweak(Tweak tweak, bool apply) async {
-    if (_hasRoot != true) {
-      _log('✗ ${tweak.title}: kök erişimi yok, atlandı.');
-      _showSnack('Bu tweak kök (root) erişimi gerektiriyor.');
+    final useRoot = _hasRoot == true;
+    final useShizuku = !useRoot && _shizukuReady;
+    if (!useRoot && !useShizuku) {
+      _log('✗ ${tweak.title}: kök erişimi ya da Shizuku izni yok, atlandı.');
+      _showSnack('Bu tweak kök (root) ya da Shizuku erişimi gerektiriyor.');
       return;
     }
     if (apply && tweak.dangerous) {
@@ -97,9 +142,13 @@ class _WinUtilSectionState extends State<WinUtilSection> {
       if (confirmed != true) return;
     }
     setState(() => _busyIds.add(tweak.id));
-    _log('${apply ? '›' : '‹'} ${tweak.title} ${apply ? 'uygulanıyor' : 'geri alınıyor'}...');
+    final via = useRoot ? 'root' : 'Shizuku';
+    _log('${apply ? '›' : '‹'} ${tweak.title} ($via) ${apply ? 'uygulanıyor' : 'geri alınıyor'}...');
     try {
-      await for (final line in _service.runTweak(tweak, apply: apply)) {
+      final stream = useRoot
+          ? _service.runTweak(tweak, apply: apply)
+          : _shizukuService.runTweak(tweak, apply: apply);
+      await for (final line in stream) {
         _log('  $line');
       }
       if (mounted) {
@@ -114,6 +163,9 @@ class _WinUtilSectionState extends State<WinUtilSection> {
     } on WinUtilRootRequiredException {
       _log('✗ ${tweak.title}: kök erişimi yok.');
       _showSnack('Bu tweak kök (root) erişimi gerektiriyor.');
+    } on ShizukuUnavailableException catch (e) {
+      _log('✗ ${tweak.title}: $e');
+      _showSnack('$e');
     } catch (e) {
       _log('✗ ${tweak.title}: hata - $e');
     } finally {
@@ -188,7 +240,13 @@ class _WinUtilSectionState extends State<WinUtilSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _RootStatusBanner(hasRoot: _hasRoot ?? false),
+        _PrivilegeStatusBanner(
+          hasRoot: _hasRoot ?? false,
+          shizukuRunning: _shizukuRunning,
+          shizukuPermitted: _shizukuPermitted,
+          shizukuBusy: _shizukuBusy,
+          onRequestShizukuPermission: _requestShizukuPermission,
+        ),
         const SizedBox(height: 14),
         SegmentedTabBar(
           tabs: _segments,
@@ -273,7 +331,7 @@ class _WinUtilSectionState extends State<WinUtilSection> {
                     tweak: tweak,
                     applied: _appliedIds.contains(tweak.id),
                     busy: _busyIds.contains(tweak.id),
-                    rootAvailable: _hasRoot ?? false,
+                    rootAvailable: _privileged,
                     onToggle: (value) => _toggleTweak(tweak, value),
                     onRun: () => _toggleTweak(tweak, true),
                   ),
@@ -335,13 +393,60 @@ class _WinUtilSectionState extends State<WinUtilSection> {
   }
 }
 
-class _RootStatusBanner extends StatelessWidget {
-  const _RootStatusBanner({required this.hasRoot});
+/// Üç olası yetki durumunu gösterir: kök (root), Shizuku (ADB, kök
+/// gerektirmez) veya hiçbiri. Kök zaten varsa Shizuku durumu hiç
+/// gösterilmez - kök her zaman önceliklidir (bkz. `_toggleTweak`).
+class _PrivilegeStatusBanner extends StatelessWidget {
+  const _PrivilegeStatusBanner({
+    required this.hasRoot,
+    required this.shizukuRunning,
+    required this.shizukuPermitted,
+    required this.shizukuBusy,
+    required this.onRequestShizukuPermission,
+  });
+
   final bool hasRoot;
+  final bool shizukuRunning;
+  final bool shizukuPermitted;
+  final bool shizukuBusy;
+  final VoidCallback onRequestShizukuPermission;
 
   @override
   Widget build(BuildContext context) {
-    final color = hasRoot ? AppColors.accent : AppColors.warn;
+    final shizukuReady = shizukuRunning && shizukuPermitted;
+    final ready = hasRoot || shizukuReady;
+    final color = ready ? AppColors.accent : AppColors.warn;
+
+    String message;
+    Widget? action;
+    if (hasRoot) {
+      message = "Kök erişimi bulundu - tweak'ler doğrudan uygulanabilir.";
+    } else if (shizukuReady) {
+      message = "Kök yok, ama Shizuku hazır - tweak'ler ADB yetkisiyle çalıştırılabilir.";
+    } else if (shizukuRunning) {
+      message = "Shizuku çalışıyor ama izin verilmedi.";
+      action = TextButton(
+        onPressed: shizukuBusy ? null : onRequestShizukuPermission,
+        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
+        child: Text(
+          shizukuBusy ? '...' : 'İzin iste',
+          style: TextStyle(color: AppColors.warn, fontSize: 12),
+        ),
+      );
+    } else {
+      message = "Kök erişimi ve Shizuku bulunamadı - tweak'ler bu cihazda çalıştırılamaz. "
+          "Kısayollar ve uygulama önerileri ikisi olmadan da çalışır. Shizuku "
+          "kurup Kablosuz Hata Ayıklama ile başlattıktan sonra tekrar deneyin.";
+      action = TextButton(
+        onPressed: shizukuBusy ? null : onRequestShizukuPermission,
+        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
+        child: Text(
+          shizukuBusy ? '...' : 'Tekrar dene',
+          style: TextStyle(color: AppColors.warn, fontSize: 12),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
@@ -351,17 +456,12 @@ class _RootStatusBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(hasRoot ? Icons.verified_user : Icons.lock_outline, color: color, size: 18),
+          Icon(ready ? Icons.verified_user : Icons.lock_outline, color: color, size: 18),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              hasRoot
-                  ? "Kök erişimi bulundu - tweak'ler doğrudan uygulanabilir."
-                  : "Kök erişimi bulunamadı - tweak'ler bu cihazda çalıştırılamaz. "
-                      "Kısayollar ve uygulama önerileri kök gerektirmeden çalışır.",
-              style: TextStyle(color: color, fontSize: 12, height: 1.3),
-            ),
+            child: Text(message, style: TextStyle(color: color, fontSize: 12, height: 1.3)),
           ),
+          if (action != null) ...[const SizedBox(width: 8), action],
         ],
       ),
     );
