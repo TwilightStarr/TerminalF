@@ -67,6 +67,48 @@ jobs:
             sed -i 's/targetSdkVersion flutter.targetSdkVersion/targetSdkVersion 34/' android/app/build.gradle
           fi
 
+      - name: Tum alt projelerde (pluginler dahil) Java/Kotlin JVM hedefini 17'de esitle
+        run: |
+          if [ -f "android/build.gradle.kts" ]; then
+            {
+              echo 'subprojects {'
+              echo '    afterEvaluate {'
+              echo '        extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.apply {'
+              echo '            compileOptions {'
+              echo '                sourceCompatibility = JavaVersion.VERSION_17'
+              echo '                targetCompatibility = JavaVersion.VERSION_17'
+              echo '            }'
+              echo '        }'
+              echo '        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class.java).configureEach {'
+              echo '            kotlinOptions {'
+              echo '                jvmTarget = "17"'
+              echo '            }'
+              echo '        }'
+              echo '    }'
+              echo '}'
+            } >> android/build.gradle.kts
+          elif [ -f "android/build.gradle" ]; then
+            {
+              echo 'subprojects {'
+              echo '    afterEvaluate { proj ->'
+              echo '        if (proj.hasProperty("android")) {'
+              echo '            proj.android {'
+              echo '                compileOptions {'
+              echo '                    sourceCompatibility JavaVersion.VERSION_17'
+              echo '                    targetCompatibility JavaVersion.VERSION_17'
+              echo '                }'
+              echo '            }'
+              echo '        }'
+              echo '        proj.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {'
+              echo '            kotlinOptions {'
+              echo '                jvmTarget = "17"'
+              echo '            }'
+              echo '        }'
+              echo '    }'
+              echo '}'
+            } >> android/build.gradle
+          fi
+
       - name: Uygulama adini TerminalF yap
         run: |
           sed -i 's/android:label="[^"]*"/android:label="TerminalF"/' android/app/src/main/AndroidManifest.xml
