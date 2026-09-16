@@ -10,6 +10,7 @@ class SettingsService {
   static const _vibrationDurationMsKey = 'vibration_duration_ms';
   static const _brightnessKey = 'app_brightness';
   static const _themeKey = 'app_theme';
+  static const _appliedTweakIdsKey = 'applied_tweak_ids';
 
   Future<bool> getKeepScreenOn() async {
     final prefs = await SharedPreferences.getInstance();
@@ -74,5 +75,21 @@ class SettingsService {
   Future<void> setThemeName(String themeKey) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_themeKey, themeKey);
+  }
+
+  /// Kullanıcının en son "uyguladım" dediği tweak id'leri (bkz.
+  /// `winutil_tab.dart` > `_appliedIds`). Bu, gerçek cihaz durumunun canlı
+  /// bir sorgusu DEĞİL — ama en azından uygulama kapatılıp açıldığında
+  /// switch'lerin sıfırlanıp "hiçbiri uygulanmamış gibi" görünmesini
+  /// engeller (önceki davranış: bu liste yalnızca State içinde tutuluyordu,
+  /// hiç kalıcı değildi).
+  Future<Set<String>> getAppliedTweakIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_appliedTweakIdsKey) ?? const []).toSet();
+  }
+
+  Future<void> setAppliedTweakIds(Set<String> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_appliedTweakIdsKey, ids.toList());
   }
 }
