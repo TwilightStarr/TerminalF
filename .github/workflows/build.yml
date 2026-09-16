@@ -71,6 +71,18 @@ jobs:
         run: |
           sed -i 's/android:label="[^"]*"/android:label="TerminalF"/' android/app/src/main/AndroidManifest.xml
 
+      - name: Shizuku provider'ini AndroidManifest.xml'e ekle
+        run: |
+          sed -i '/<\/application>/i\    <provider android:name="rikka.shizuku.ShizukuProvider" android:authorities="${applicationId}.shizuku" android:multiprocess="false" android:enabled="true" android:exported="true" android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />' android/app/src/main/AndroidManifest.xml
+
+      - name: minSdk'yi Shizuku icin 24'e yukselt
+        run: |
+          if [ -f "android/app/build.gradle.kts" ]; then
+            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 24/' android/app/build.gradle.kts
+          elif [ -f "android/app/build.gradle" ]; then
+            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 24/' android/app/build.gradle
+          fi
+
       - run: flutter pub get
       - run: flutter build apk --release
 
