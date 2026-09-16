@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../models/tweak_model.dart';
+import '../services/settings_service.dart';
 import '../services/shizuku_service.dart';
 import '../services/winutil_service.dart';
 import '../widgets/segmented_tab_bar.dart';
@@ -23,6 +24,7 @@ class WinUtilSection extends StatefulWidget {
 class _WinUtilSectionState extends State<WinUtilSection> {
   final _service = WinUtilService();
   final _shizukuService = ShizukuService();
+  final _settingsService = SettingsService();
 
   static const _segments = [
     TerminalTabDef('tweaks', "Tweak'ler"),
@@ -48,12 +50,15 @@ class _WinUtilSectionState extends State<WinUtilSection> {
   List<RecommendedApp> _apps = const [];
   List<FeatureShortcut> _features = const [];
 
-  /// Kullanıcının bu oturumda "uyguladım" dediği tweak id'leri - gerçek
-  /// sistem durumunun canlı bir sorgusu DEĞİL, yalnızca arayüzün hangi
-  /// switch'i açık göstereceğine dair uygulamanın kendi hafızası. Kalıcı
-  /// değildir: her tweak için ayrı ayrı gerçek durumu sorgulamak (`settings
-  /// get`, `pm list packages -d`) bu ilk sürümün kapsamı dışında bırakıldı.
-  final Set<String> _appliedIds = {};
+  /// Kullanıcının "uyguladım" dediği tweak id'leri - gerçek sistem
+  /// durumunun canlı bir sorgusu DEĞİL, yalnızca arayüzün hangi switch'i
+  /// açık göstereceğine dair uygulamanın kendi hafızası (her tweak için
+  /// ayrı ayrı gerçek durumu sorgulamak - `settings get`, `pm list
+  /// packages -d` - bu ilk sürümün kapsamı dışında bırakıldı). ANCAK artık
+  /// `SettingsService` ile kalıcı: uygulama kapatılıp açıldığında ya da
+  /// tuştan sonlandırıldığında switch'ler sıfırlanmıyor, en son bilinen
+  /// durum geri yükleniyor (bkz. `_bootstrap` ve `_toggleTweak`).
+  Set<String> _appliedIds = {};
   final Set<String> _busyIds = {};
 
   final List<String> _consoleLines = [];
@@ -80,6 +85,7 @@ class _WinUtilSectionState extends State<WinUtilSection> {
       _service.hasRoot(),
       _shizukuService.isRunning(),
       _shizukuService.hasPermission(),
+      _settingsService.getAppliedTweakIds(),
     ]);
     if (!mounted) return;
     setState(() {
@@ -89,6 +95,11 @@ class _WinUtilSectionState extends State<WinUtilSection> {
       _hasRoot = results[3] as bool;
       _shizukuRunning = results[4] as bool;
       _shizukuPermitted = results[5] as bool;
+      // Bir önceki oturumdan kalan "uygulandı" durumunu geri yükle - bkz.
+      // `_appliedIds` alanının yorumu. Bilinmeyen id'ler (ör. uzaktan
+      // yapılandırma değiştiyse) sonraki adımda otomatik elenir çünkü
+      // yalnızca `_tweaks` içinde eşleşen id'ler switch'te "açık" görünür.
+      _appliedIds = results[6] as Set<String>;
       _loading = false;
     });
   }
@@ -160,6 +171,11 @@ class _WinUtilSectionState extends State<WinUtilSection> {
           }
         });
       }
+      // Komut gerçekten başarıyla çalıştı (yukarıda hata fırlatılmadı) -
+      // yeni durumu kalıcı hale getir. `setState` içindeki `_appliedIds`
+      // ile aynı anda değil, ondan hemen sonra: `await` gerektirdiği için
+      // `setState`'in senkron callback'i içine konamaz.
+      await _settingsService.setAppliedTweakIds(_appliedIds);
     } on WinUtilRootRequiredException {
       _log('✗ ${tweak.title}: kök erişimi yok.');
       _showSnack('Bu tweak kök (root) erişimi gerektiriyor.');
