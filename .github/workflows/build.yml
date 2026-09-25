@@ -79,9 +79,82 @@ jobs:
         run: |
           sed -i 's/android:label="[^"]*"/android:label="TerminalF"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Shizuku provider'ini AndroidManifest.xml'e ekle
+      - name: AndroidManifest.xml'e izinleri, queries ve Shizuku provider'ini ekle
         run: |
-          sed -i '/<\/application>/i\    <provider android:name="rikka.shizuku.ShizukuProvider" android:authorities="${applicationId}.shizuku" android:multiprocess="false" android:enabled="true" android:exported="true" android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />' android/app/src/main/AndroidManifest.xml
+          python3 - <<'PY'
+          import re
+
+          path = 'android/app/src/main/AndroidManifest.xml'
+          with open(path, encoding='utf-8') as f:
+              manifest = f.read()
+
+          # QUERY_ALL_PACKAGES icin tools:ignore gerekiyor -> tools ad alani.
+          if 'xmlns:tools=' not in manifest:
+              manifest = manifest.replace(
+                  '<manifest ',
+                  '<manifest xmlns:tools="http://schemas.android.com/tools" ',
+                  1,
+              )
+
+          # (izin adi, tam satir) - zaten varsa tekrar eklenmez (idempotent).
+          permissions = [
+              ('android.permission.INTERNET',
+               '<uses-permission android:name="android.permission.INTERNET"/>'),
+              ('android.permission.VIBRATE',
+               '<uses-permission android:name="android.permission.VIBRATE"/>'),
+              ('android.permission.POST_NOTIFICATIONS',
+               '<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'),
+              ('android.permission.QUERY_ALL_PACKAGES',
+               '<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission"/>'),
+              ('moe.shizuku.manager.permission.API_V23',
+               '<uses-permission android:name="moe.shizuku.manager.permission.API_V23"/>'),
+          ]
+          missing = [line for name, line in permissions
+                     if 'android:name="%s"' % name not in manifest]
+
+          # <queries>: Flutter sablonu zaten bir <queries> blogu icerebilir;
+          # varsa Shizuku paketini onun icine, yoksa yeni blok olarak ekle.
+          shizuku_pkg = '<package android:name="moe.shizuku.privileged.api"/>'
+          if 'moe.shizuku.privileged.api' not in manifest:
+              if '</queries>' in manifest:
+                  manifest = manifest.replace(
+                      '</queries>', '    ' + shizuku_pkg + '\n    </queries>', 1)
+              else:
+                  missing.append('<queries>' + shizuku_pkg + '</queries>')
+
+          if missing:
+              block = ''.join('    ' + line + '\n' for line in missing)
+              manifest = re.sub(r'([ \t]*)<application', lambda m: block + m.group(0),
+                                manifest, count=1)
+
+          provider = ('    <provider android:name="rikka.shizuku.ShizukuProvider" '
+                      'android:authorities="${applicationId}.shizuku" '
+                      'android:multiprocess="false" android:enabled="true" '
+                      'android:exported="true" '
+                      'android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />\n')
+          if 'rikka.shizuku.ShizukuProvider' not in manifest:
+              manifest = manifest.replace('</application>', provider + '    </application>', 1)
+
+          with open(path, 'w', encoding='utf-8') as f:
+              f.write(manifest)
+          PY
+
+      - name: Manifest'i dogrula (eksik izin/bilesen varsa derlemeyi durdur)
+        run: |
+          cat android/app/src/main/AndroidManifest.xml
+          for needle in \
+            'android.permission.INTERNET' \
+            'android.permission.VIBRATE' \
+            'android.permission.POST_NOTIFICATIONS' \
+            'android.permission.QUERY_ALL_PACKAGES' \
+            'moe.shizuku.manager.permission.API_V23' \
+            'moe.shizuku.privileged.api' \
+            'rikka.shizuku.ShizukuProvider'; do
+            if ! grep -q "$needle" android/app/src/main/AndroidManifest.xml; then
+              echo "Manifest'te eksik: $needle"
+              exit 1
+            fi
+          done
 
       - name: minSdk'yi Shizuku icin 24'e yukselt
         run: |

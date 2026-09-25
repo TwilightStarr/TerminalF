@@ -6,6 +6,8 @@
     "category": "debloat",
     "applyCommand": "pm disable-user --user 0 com.facebook.appmanager; pm disable-user --user 0 com.facebook.services; pm disable-user --user 0 com.facebook.system",
     "revertCommand": "pm enable com.facebook.appmanager; pm enable com.facebook.services; pm enable com.facebook.system",
+    "checkCommand": "pm list packages -d com.facebook.appmanager; pm list packages -d com.facebook.services; pm list packages -d com.facebook.system",
+    "expectedOutput": "package:com.facebook.appmanager\npackage:com.facebook.services\npackage:com.facebook.system",
     "requiresRoot": true,
     "dangerous": true
   },
@@ -16,6 +18,8 @@
     "category": "debloat",
     "applyCommand": "pm disable-user --user 0 com.google.android.feedback",
     "revertCommand": "pm enable com.google.android.feedback",
+    "checkCommand": "pm list packages -d com.google.android.feedback",
+    "expectedOutput": "package:com.google.android.feedback",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -26,6 +30,8 @@
     "category": "debloat",
     "applyCommand": "pm disable-user --user 0 com.google.android.onetimeinitializer",
     "revertCommand": "pm enable com.google.android.onetimeinitializer",
+    "checkCommand": "pm list packages -d com.google.android.onetimeinitializer",
+    "expectedOutput": "package:com.google.android.onetimeinitializer",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -36,6 +42,8 @@
     "category": "performance",
     "applyCommand": "settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0",
     "revertCommand": "settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1",
+    "checkCommand": "settings get global window_animation_scale; settings get global transition_animation_scale; settings get global animator_duration_scale",
+    "expectedOutput": "0\n0\n0",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -46,6 +54,8 @@
     "category": "performance",
     "applyCommand": "settings put global force_gpu_rendering 1",
     "revertCommand": "settings put global force_gpu_rendering 0",
+    "checkCommand": "settings get global force_gpu_rendering",
+    "expectedOutput": "1",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -56,6 +66,8 @@
     "category": "performance",
     "applyCommand": "settings put global adaptive_battery_management_enabled 0",
     "revertCommand": "settings put global adaptive_battery_management_enabled 1",
+    "checkCommand": "settings get global adaptive_battery_management_enabled",
+    "expectedOutput": "0",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -66,6 +78,8 @@
     "category": "performance",
     "applyCommand": "settings put system peak_refresh_rate 120.0; settings put system min_refresh_rate 120.0",
     "revertCommand": "settings delete system peak_refresh_rate; settings delete system min_refresh_rate",
+    "checkCommand": "settings get system peak_refresh_rate; settings get system min_refresh_rate",
+    "expectedOutput": "120.0\n120.0",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -76,6 +90,8 @@
     "category": "performance",
     "applyCommand": "settings put system peak_refresh_rate 60.0; settings put system min_refresh_rate 60.0",
     "revertCommand": "settings delete system peak_refresh_rate; settings delete system min_refresh_rate",
+    "checkCommand": "settings get system peak_refresh_rate; settings get system min_refresh_rate",
+    "expectedOutput": "60.0\n60.0",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -96,6 +112,8 @@
     "category": "privacy",
     "applyCommand": "settings put global limit_ad_tracking 1",
     "revertCommand": "settings put global limit_ad_tracking 0",
+    "checkCommand": "settings get global limit_ad_tracking",
+    "expectedOutput": "1",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -106,6 +124,8 @@
     "category": "privacy",
     "applyCommand": "settings put secure send_action_app_error 0",
     "revertCommand": "settings put secure send_action_app_error 1",
+    "checkCommand": "settings get secure send_action_app_error",
+    "expectedOutput": "0",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -116,6 +136,8 @@
     "category": "debloat",
     "applyCommand": "pm disable-user --user 0 com.android.printservice.recommendation",
     "revertCommand": "pm enable com.android.printservice.recommendation",
+    "checkCommand": "pm list packages -d com.android.printservice.recommendation",
+    "expectedOutput": "package:com.android.printservice.recommendation",
     "requiresRoot": true,
     "dangerous": false
   },
@@ -126,6 +148,8 @@
     "category": "privacy",
     "applyCommand": "settings put global wifi_scan_always_enabled 0; settings put global ble_scan_always_enabled 0",
     "revertCommand": "settings put global wifi_scan_always_enabled 1; settings put global ble_scan_always_enabled 1",
+    "checkCommand": "settings get global wifi_scan_always_enabled; settings get global ble_scan_always_enabled",
+    "expectedOutput": "0\n0",
     "requiresRoot": true,
     "dangerous": false
   }

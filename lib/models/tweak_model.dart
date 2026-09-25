@@ -49,6 +49,8 @@ class Tweak {
     required this.category,
     required this.applyCommand,
     this.revertCommand,
+    this.checkCommand,
+    this.expectedOutput,
     this.requiresRoot = true,
     this.dangerous = false,
   });
@@ -58,7 +60,8 @@ class Tweak {
   final String description;
   final TweakCategory category;
 
-  /// `su -c` altında çalıştırılacak kabuk komutu.
+  /// Root yolunda `su -c` altında, Shizuku yolunda `sh -c` sarmalayıcısıyla
+  /// (bkz. `ShizukuService`) çalıştırılacak kabuk komutu.
   final String applyCommand;
 
   /// Varsa, tweak'i geri almak için çalıştırılacak komut. `null`/boş ise
@@ -66,6 +69,27 @@ class Tweak {
   /// (örn. "Arka Plan Uygulamalarını Temizle") — arayüzde switch yerine
   /// tek bir "Çalıştır" düğmesi gösterilir.
   final String? revertCommand;
+
+  /// Tweak'in cihazda gerçekten AÇIK olup olmadığını okuyan, yan etkisiz
+  /// (salt okunur) komut - örn. `settings get global window_animation_scale`
+  /// ya da `pm list packages -d <paket>`. Opsiyoneldir; yoksa durum cihazdan
+  /// okunamaz (bkz. `winutil_tab.dart` > Durum Paneli).
+  final String? checkCommand;
+
+  /// [checkCommand] çıktısının, tweak AÇIKKEN alması beklenen değeri
+  /// (satır satır, boşluklar kırpılarak ve sayılar sayısal olarak
+  /// karşılaştırılır - bkz. `utils/tweak_status.dart` > `outputsMatch`).
+  /// Çıktı eşleşmezse tweak KAPALI sayılır.
+  final String? expectedOutput;
+
+  /// Cihazdan durum okumaya yetecek bilgi var mı? İki alan da dolu olmalı.
+  bool get hasCheck =>
+      checkCommand != null &&
+      checkCommand!.isNotEmpty &&
+      expectedOutput != null;
+
+  /// `revertCommand` varsa anahtar (toggle), yoksa tek seferlik eylem.
+  bool get isToggle => revertCommand != null && revertCommand!.isNotEmpty;
 
   /// Şu an için tüm tweak'lerde `true` olmalı: bu ilk sürümde tek çalıştırma
   /// yolu köktür (bkz. sınıf yorumu). Alan, ileride kök gerektirmeyen bir
@@ -85,6 +109,8 @@ class Tweak {
       category: TweakCategoryX.fromJson(json['category'] as String? ?? ''),
       applyCommand: json['applyCommand'] as String,
       revertCommand: json['revertCommand'] as String?,
+      checkCommand: json['checkCommand'] as String?,
+      expectedOutput: json['expectedOutput'] as String?,
       requiresRoot: json['requiresRoot'] as bool? ?? true,
       dangerous: json['dangerous'] as bool? ?? false,
     );

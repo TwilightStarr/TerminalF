@@ -49,7 +49,12 @@ flutter pub get
 # 2) Platform klasörlerini üret (android/ ios/ vb.)
 flutter create . --platforms=android,ios
 
-# 3) Android izinlerini AndroidManifest.xml'e ekleyin (titreşim ve
+# 3) Android izinleri: GitHub Actions iş akışı (.github/workflows/build.yml)
+#    aşağıdaki izinleri, <queries> girdisini ve Shizuku provider'ını derleme
+#    sırasında AndroidManifest.xml'e OTOMATİK ekler (INTERNET, VIBRATE,
+#    POST_NOTIFICATIONS, QUERY_ALL_PACKAGES, moe.shizuku.manager.permission.API_V23,
+#    <package android:name="moe.shizuku.privileged.api"/>, ShizukuProvider).
+#    Yerelde elle derliyorsanız bunları kendiniz ekleyin (titreşim ve
 #    ekranı açık tutma için gerekli olabilir; wakelock_plus ve
 #    vibration paketleri genelde kendi manifest birleştirmelerini
 #    otomatik yapar, ama derleme sonrası android/app/src/main/AndroidManifest.xml
@@ -331,6 +336,29 @@ yüzden bilinçli olarak ertelendi — bkz. aşağıdaki "Sıradaki adımlar".
 - [ ] **Depolama yönetiminde ayrıntılı kırılım**: `StorageService`'in şu an tek bir toplam (`totalBytes`) döndürdüğü belge klasörü, alt klasör bazında ("hangi klasör ne kadar yer kaplıyor") listelenip yalnızca seçilen alt klasörün silinebilmesi — mevcut `clearCache()` deseninin genişletilmesi, yeni bir pakete ihtiyaç duymuyor
 - [ ] **Ayarların JSON olarak dışa/içe aktarılması**: `SettingsService`'teki tüm tercihlerin tek bir JSON dosyasına yazılıp (paylaşma için `share_plus`) veya bir dosyadan geri okunması — cihaz değişikliğinde/yedeklemede kullanışlı, gerçekçi ve küçük kapsamlı bir özellik
 - [ ] Ağ sekmesine bağlantı türü (Wi-Fi / mobil veri) ve Wi-Fi ağ adı (SSID) bilgisinin eklenmesi — `network_info_plus` paketi zaten kullanılıyor, yalnızca ek alanların okunması gerekiyor
+
+## Android Araçları: Tweak'ler, Shizuku ve Durum Paneli
+
+"Uygulamalar" sekmesinin ikinci alt sekmesi (`lib/tabs/winutil_tab.dart`),
+`assets/config/tweaks.json` içindeki tweak'leri kök (root) ya da Shizuku
+(rootsuz, ADB `shell` yetkisi) üzerinden çalıştırır.
+
+- **Yetki yolu**: kök varsa kök; yoksa Shizuku — yalnızca servis çalışıyor,
+  izin verilmiş VE gerçek bir `id` test komutu başarılı olduysa "hazır"
+  sayılır ve hangi kimlikle (shell/root) çalıştığı gösterilir.
+- **Başarısız komut "tamamlandı" görünmez**: çıkış kodu sıfırdan farklıysa
+  ya da çıktıda hata izi varsa (`Exception`, `Unknown package` ...) tweak
+  uygulanmış sayılmaz. `shizuku_api` çıkış kodu döndürmediği için komut
+  `sh -c` ile sarılıp `echo $?` ile çıkış kodu geri okunur; bu sarmalayıcı
+  çalışmazsa ham moda düşülür ve bu konsolda belirtilir.
+- **Rootsuz sınırı**: `pm`/`settings`/`cmd` komutlarının çoğu shell
+  yetkisiyle çalışır, ama bazıları (OEM'e/Android sürümüne göre) çalışmaz.
+  Böyle bir tweak başarısız olur ve sebebi konsolda gösterilir.
+- **Durum Paneli**: `tweaks.json` şemasındaki opsiyonel `checkCommand`
+  (salt okunur komut) ve `expectedOutput` (tweak AÇIKKEN beklenen çıktı)
+  alanlarıyla her tweak'in durumu cihazdan okunur: **AÇIK / KAPALI /
+  BİLİNMİYOR**. Okunamazsa uygulamanın kendi kaydına (`_appliedIds`) düşülür
+  ve rozet "(tahmini)" diye işaretlenir.
 
 ## Flutter'ın (bu temel sürümün) sınırları — önemli
 

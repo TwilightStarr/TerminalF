@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/tweak_model.dart';
+import '../utils/shell_utils.dart';
 
 /// Bir tweak, kök (root) erişimi olmadan çalıştırılmaya çalışıldığında
 /// fırlatılır — bkz. `Tweak` sınıf yorumu.
@@ -32,6 +33,11 @@ class WinUtilRootRequiredException implements Exception {
 ///   göstersin (bkz. `winutil_tab.dart`).
 class WinUtilService {
   bool? _rootCache;
+  ShellIdentity? _rootIdentity;
+
+  /// Son başarılı kök testinde `su -c id` ile okunan kimlik (kök yoksa
+  /// `null`) - arayüzde "root (uid 0)" olarak gösterilir.
+  ShellIdentity? get rootIdentity => _rootIdentity;
 
   /// Cihazda kök erişimi olup olmadığını dener ve sonucu bir kez
   /// önbelleğe alır (her tweak öncesi `su` izin diyaloğu tekrar tekrar
@@ -44,18 +50,42 @@ class WinUtilService {
       );
       final out = '${result.stdout}';
       _rootCache = result.exitCode == 0 && out.contains('uid=0');
+      _rootIdentity = _rootCache == true ? parseIdOutput(out) : null;
     } catch (_) {
       // `su` ikili dosyası yok (cihaz rootlu değil) ya da izin isteği
       // zaman aşımına uğradı - her iki durumda da kök yok say.
       _rootCache = false;
+      _rootIdentity = null;
     }
     return _rootCache!;
+  }
+
+  /// [command]'ı `su -c` altında çalıştırıp sonucunu (çıktı + çıkış kodu)
+  /// döner - durum okuma (`checkCommand`) için. Kök yoksa
+  /// [WinUtilRootRequiredException] fırlatır. Çıkış kodu sıfırdan farklıysa
+  /// stderr da çıktıya eklenir ki hata nedeni görülebilsin.
+  Future<ShellResult> exec(String command) async {
+    if (!await hasRoot()) {
+      throw const WinUtilRootRequiredException();
+    }
+    final result = await Process.run('su', ['-c', command]).timeout(
+      const Duration(seconds: 15),
+    );
+    var output = '${result.stdout}'.trim();
+    final err = '${result.stderr}'.trim();
+    if (result.exitCode != 0 && err.isNotEmpty) {
+      output = '$output\n$err'.trim();
+    }
+    return ShellResult(output: output, exitCode: result.exitCode);
   }
 
   /// [tweak]'in komutunu (`apply` ise [Tweak.applyCommand], değilse
   /// [Tweak.revertCommand]) `su -c` altında çalıştırır ve çıktısını satır
   /// satır akıtır. Kök yoksa hiçbir şey çalıştırmadan
-  /// [WinUtilRootRequiredException] fırlatır.
+  /// [WinUtilRootRequiredException] fırlatır; komut başarısız olursa
+  /// (sıfırdan farklı çıkış kodu ya da çıktıda hata izi)
+  /// [TweakCommandFailedException] fırlatır - başarısız komut ASLA
+  /// "tamamlandı" diye görünmez.
   Stream<String> runTweak(Tweak tweak, {required bool apply}) async* {
     if (!await hasRoot()) {
       throw const WinUtilRootRequiredException();
@@ -68,21 +98,40 @@ class WinUtilService {
   Stream<String> _stream(String command) async* {
     final process = await Process.start('su', ['-c', command]);
     final controller = StreamController<String>();
+    final collected = StringBuffer();
 
-    void pump(Stream<List<int>> source) {
-      source.transform(utf8.decoder).transform(const LineSplitter()).listen(
-            controller.add,
-            onError: (_) {},
-          );
+    Future<void> pump(Stream<List<int>> source) {
+      return source
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .forEach((line) {
+        collected.writeln(line);
+        controller.add(line);
+      });
     }
 
-    pump(process.stdout);
-    pump(process.stderr);
-
-    unawaited(process.exitCode.then((code) {
-      controller.add(code == 0 ? '› tamamlandi (kod 0)' : '› hata (kod $code)');
-      controller.close();
-    }));
+    unawaited(() async {
+      try {
+        try {
+          await Future.wait([pump(process.stdout), pump(process.stderr)]);
+        } catch (_) {
+          // Akış okuma hatası çıkış kodunu etkilemez; aşağıda yine de
+          // çıkış kodu değerlendirilir.
+        }
+        final code = await process.exitCode;
+        final result = ShellResult(output: collected.toString().trim(), exitCode: code);
+        final reason = failureReason(result);
+        if (reason == null) {
+          controller.add('› tamamlandı (kod $code)');
+        } else {
+          controller.addError(TweakCommandFailedException(reason));
+        }
+      } catch (e) {
+        controller.addError(TweakCommandFailedException('komut sonucu okunamadı: $e'));
+      } finally {
+        await controller.close();
+      }
+    }());
 
     yield* controller.stream;
   }
