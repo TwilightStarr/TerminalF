@@ -13,11 +13,13 @@ import com.terminalf.app.state.Observable
  * control.observe()
  * ```
  *
- * `inline` olması şarttır: okuma, çağıran composable'ın kapsamına yazılsın diye.
+ * Not: işlev değer (T) döndürdüğü için Compose onu yeniden başlatılabilir bir kapsam
+ * olarak değil, çağıranın kapsamına gömülü işler; bu yüzden `inline` gerekmez ve durum okuması
+ * çağıran composable'ı yeniden çizer.
  */
 @Composable
-inline fun <T : Observable> T.observe(): T {
-    @Suppress("UNUSED_VARIABLE")
-    val tick = changes.collectAsState().value
+fun <T : Observable> T.observe(): T {
+    // Sayaç yalnızca okunur (abonelik için); değeri hiç negatif olmaz.
+    check(changes.collectAsState().value >= 0L)
     return this
 }

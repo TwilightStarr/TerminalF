@@ -27,7 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
@@ -150,12 +152,19 @@ private fun AppShell(container: AppContainer, snackbar: SnackbarHostState) {
                         onClick = { select(i) },
                         icon = { Icon(if (selected) tab.rounded else tab.outlined, contentDescription = tab.label) },
                         label = {
+                            // Etiket tek satırda kalır: yazı tipi ölçeğinden bağımsız sabit boyut
+                            // (dp -> sp), sığmazsa kırpılır; "Uygulamalar" iki satıra bölünmez.
                             Text(
                                 tab.label,
-                                fontSize = 12.sp,
+                                fontSize = with(LocalDensity.current) { 11.dp.toSp() },
+                                letterSpacing = 0.sp,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Clip,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                             )
                         },
+                        alwaysShowLabel = true,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = c.primary,
                             selectedTextColor = c.primary,

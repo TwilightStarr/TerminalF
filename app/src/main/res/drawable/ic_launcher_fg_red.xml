@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Otomatik üretildi: tools/gen_launcher_icons.py -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="1024" android:viewportHeight="1024">
+    <group android:scaleX="1.1" android:scaleY="1.1" android:pivotX="512" android:pivotY="512">
+        <path android:pathData="M318,316 L548,512 L318,708" android:strokeColor="#FF5C5C"
+            android:strokeWidth="132" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000">
+        </path>
+        <path android:pathData="M632,664 L756,664 A34,34 0 0 1 790,698 L790,734 A34,34 0 0 1 756,768 L632,768 A34,34 0 0 1 598,734 L598,698 A34,34 0 0 1 632,664 Z" android:fillColor="#F5F5F5"/>
+    </group>
+</vector>

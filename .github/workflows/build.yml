@@ -65,33 +65,31 @@ jobs:
             :app:compileDebugKotlin :app:compileDebugUnitTestKotlin :app:testDebugUnitTest \
             2>&1 | tee gradle-build.log
 
-      # Opsiyonel: GitHub Secrets tanimliysa surum kalici anahtarla imzalanir
-      # (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD).
-      # Tanimli degilse debug anahtariyla imzalanir ve derleme yine calisir.
-      - name: Surum imzasini hazirla (secret varsa)
+      # Imza: GitHub Secrets'taki tek anahtar (KEYSTORE_BASE64) ile imzalanir; her surum ayni
+      # anahtarla imzalandigi icin mevcut kurulumun uzerine guncellenir. Secret yoksa derleme
+      # DURUR (guncellenemeyen APK uretmemek icin).
+      - name: Surum imzasini hazirla
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE_B64" ]; then
-            echo "Imza secret'lari yok: debug anahtariyla imzalanacak."
-            exit 0
+            echo "::error::KEYSTORE_BASE64 secret'i tanimli degil (Settings > Secrets and variables > Actions)."
+            exit 1
           fi
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
           {
             echo "storeFile=$RUNNER_TEMP/release.jks"
-            echo "storePassword=$KEYSTORE_PASSWORD"
-            echo "keyAlias=$KEY_ALIAS"
-            echo "keyPassword=$KEY_PASSWORD"
+            echo "storePassword=terminalf-update"
+            echo "keyAlias=terminalf"
+            echo "keyPassword=terminalf-update"
           } > key.properties
 
       - name: APK derle (surum ${{ steps.ver.outputs.version }})
         run: |
-          ./gradlew --no-daemon :app:assembleRelease \
+          set -o pipefail
+          ./gradlew --no-daemon --warning-mode all :app:assembleRelease \
             -PversionName=${{ steps.ver.outputs.version }} \
-            -PversionCode=${{ github.run_number }}
+            -PversionCode=$(( $(date +%s) / 60 )) 2>&1 | tee -a gradle-build.log
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk \
              dist/TerminalF-v${{ steps.ver.outputs.version }}.apk

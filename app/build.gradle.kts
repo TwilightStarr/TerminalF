@@ -7,11 +7,19 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// CI/yerel derleme sürümü: -PversionName=2.1.0 -PversionCode=42
+// Sürüm adı: -PversionName=2.1.0
 val appVersionName = (project.findProperty("versionName") as String?) ?: "3.0.0"
-val appVersionCode = ((project.findProperty("versionCode") as String?) ?: "1").toInt()
 
-// Kalıcı imza (isteğe bağlı): android/key.properties yerine kök dizinde key.properties.
+// Sürüm numarası (versionCode): Android, yalnızca ÖNCEKİNDEN BÜYÜK numaralı APK'yı mevcut kurulumun
+// üzerine günceller. Bu yüzden numara, "1970'ten beri geçen dakika" olarak üretilir: her derlemede
+// kendiliğinden büyür, elle artırmak gerekmez ve eski numaralı hiçbir derleme bunu geçemez.
+// İstenirse -PversionCode=NN ile elle verilebilir.
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toInt()
+    ?: (System.currentTimeMillis() / 60_000L).toInt()
+
+// İmza: güncellemenin çalışması için her sürüm AYNI anahtarla imzalanmalıdır.
+// Anahtar depoda tutulmaz; CI'da GitHub Secrets'tan kök dizine key.properties olarak yazılır.
+// key.properties yoksa (yerel deneme) debug anahtarı kullanılır; bu APK güncelleme için uygun değildir.
 val keystoreProps = Properties().apply {
     val f = rootProject.file("key.properties")
     if (f.exists()) FileInputStream(f).use { load(it) }
@@ -22,8 +30,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        // Flutter sürümüyle AYNI uygulama kimliği: mevcut kurulumun üzerine güncellenebilir
-        // (aynı imza anahtarıyla). Yeni bir uygulama olarak kurmak isterseniz değiştirin.
+        // DEĞİŞTİRMEYİN: güncelleme, kurulu uygulamayla aynı uygulama kimliği + aynı imza ister.
         applicationId = "com.example.terminal_flutter"
         minSdk = 24
         targetSdk = 34
@@ -47,12 +54,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = if (keystoreProps.containsKey("storeFile")) {
-                signingConfigs.getByName("release")
-            } else {
-                // Anahtar yoksa debug anahtarıyla imzalanır; derleme yine çalışır.
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 

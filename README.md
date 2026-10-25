@@ -1,33 +1,49 @@
-# TerminalF (Kotlin)
+# TerminalF
 
-Android cihaz yönetim uygulaması TerminalF'in **Kotlin + Jetpack Compose** sürümü. Flutter sürümünün tamamı
-(Ana Sayfa, Optimize, Uygulamalar, Oyun Modu, Cihaz/Görünüm/Ayarlar, Shizuku ve root erişimi, bildirimler,
-oyun gözcüsü, ısı koruması) Kotlin'e taşındı.
+Android cihazlar için hızlı, sade bir yönetim ve optimizasyon uygulaması. Root veya Shizuku ile sistem
+düzeyinde ayarları tek dokunuşla uygular; oyun performansını, pili ve depolamayı tek yerden yönetmeni sağlar.
 
-## Mimari
+## Özellikler
 
-| Katman | Yol | Not |
-|---|---|---|
-| Saf mantık | `core/` | Android'e bağımlı değil; JVM'de test edilir (komut üretimi, ayrıştırıcılar, oyun modu, gözcü betiği, tavsiye motoru, paletler) |
-| Durum | `state/` | `StateFlow` tabanlı denetleyiciler (`ControlController`, `GameModeController`, `LiveStats`, `AlertMonitor`, `AppSettings`) |
-| Veri/Android | `data/`, `shizuku/` | Root (`su -c`), Shizuku UserService (AIDL), pil, depolama, bildirim, SharedPreferences |
-| Arayüz | `ui/` | Compose (Material 3), 5 sekmeli kabuk, bottom-sheet/diyalog/toast ana bilgisayarları |
+- **Ana Sayfa** – Anlık CPU, bellek, ısı, pil ve ağ durumu; pil süresi tahmini ve uyarılar.
+- **Optimize** – Sistem animasyonları, yenileme hızı, arka plan kısıtlamaları, önbellek temizliği gibi hazır ayarlar.
+- **Uygulamalar** – Yüklü uygulamaları listele, dondur, kaldır; sistem için kritik paketler korunur.
+- **Oyun** – Oyun başına çözünürlük ölçeği ve FPS hedefi, hazır profiller, oyun gözcüsü ve ısı koruması.
+- **Cihaz / Görünüm / Ayarlar** – Cihaz bilgileri, 9 renk teması, ana ekran simgesi seçimi, bildirim ve uyarı ayarları.
+
+## Erişim
+
+Önce root denenir, yoksa Shizuku kullanılır. Hazır olma durumu gerçek bir komutla doğrulanır; başarısız bir işlem
+asla başarılı gibi gösterilmez. Ağa veri gönderilmez, telemetri yoktur.
+
+## Kurulum ve güncelleme
+
+APK'yı [Releases](../../releases) sayfasından indirip kur. Sonraki sürümler **silip yeniden kurmadan**, mevcut
+uygulamanın üzerine güncellenir; GitHub adresinden güncelleme yapan herhangi bir uygulamaya (ör. Obtainium)
+bu deponun bağlantısını vermen yeterli.
+
+Üst üste güncellemenin çalışması için iki şey sabit tutulur:
+
+- **Aynı imza:** Her sürüm aynı anahtarla imzalanır. Anahtar depoda tutulmaz, GitHub Secrets'ta `KEYSTORE_BASE64` adıyla durur. Değiştirme.
+- **Artan sürüm numarası:** `versionCode` her derlemede otomatik olarak büyür (dakika bazlı), elle artırmak gerekmez.
+
+`applicationId` değerini (`com.example.terminal_flutter`) değiştirme; değişirse Android bunu yeni bir uygulama sayar.
 
 ## Derleme
 
 ```
 ./gradlew :app:testDebugUnitTest      # birim testleri
 ./gradlew :app:assembleDebug          # debug APK
-./gradlew :app:assembleRelease -PversionName=3.0.0 -PversionCode=1
+./gradlew :app:assembleRelease        # imzalı release APK
 ```
 
-Gereksinimler: JDK 17, Android SDK 35. Kalıcı imza için kök dizine `key.properties`
-(`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) koyun; yoksa debug anahtarıyla imzalanır.
-GitHub Actions: `main`'e push → test + imzalı APK + Release (`.github/workflows/build.yml`).
+Gereksinimler: JDK 17, Android SDK 35. `main` dalına yapılan her push; test çalıştırır, imzalı APK üretir ve
+otomatik olarak yeni bir Release yayınlar (`.github/workflows/build.yml`). Commit mesajına `[minor]` veya
+`[major]` yazarak sürümü büyütebilirsin.
 
-## Önemli notlar
+Release derlemesi için GitHub'da **Settings → Secrets and variables → Actions** altına `KEYSTORE_BASE64`
+secret'ı eklenmelidir; yoksa derleme bilerek durur.
 
-- `applicationId` bilinçli olarak `com.example.terminal_flutter` bırakıldı: Flutter sürümünün üzerine **güncelleme** olarak kurulur
-  (aynı imza anahtarıyla). Flutter'ın `SharedPreferences` ayarları ilk açılışta otomatik taşınır.
-- Erişim: önce root, yoksa Shizuku. Hazırlık gerçek bir `id` komutuyla kanıtlanır; başarısızlık asla başarı gibi gösterilmez.
-- minSdk 24, targetSdk 34.
+## Gereksinimler
+
+minSdk 24, targetSdk 34.

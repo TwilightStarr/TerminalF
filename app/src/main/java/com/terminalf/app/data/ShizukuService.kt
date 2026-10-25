@@ -59,6 +59,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
     private val args: Shizuku.UserServiceArgs
         get() = Shizuku.UserServiceArgs(ComponentName(appContext.packageName, ShellUserService::class.java.name))
             .daemon(false)
+            .tag("terminalf-shell")
             .processNameSuffix("shell")
             .debuggable(BuildConfig.DEBUG)
             .version(BuildConfig.VERSION_CODE)
@@ -205,8 +206,37 @@ class ShizukuService(context: Context) : ShizukuAccess {
     private suspend fun ensureService(): IShellService {
         val current = service
         if (current != null && current.asBinder().pingBinder()) return current
+
+        val version = try {
+            Shizuku.getVersion()
+        } catch (_: Throwable) {
+            -1
+        }
+        if (version in 0..9) {
+            throw ShizukuUnavailableException("Shizuku sürümü çok eski (API $version); Shizuku'yu güncelleyin.")
+        }
+
+        // Bir kez yeniden dener: ilk bağlanma, Shizuku'nun süreci ilk kez başlatması yüzünden
+        // yavaş olabilir. Her denemenin gerçek nedeni ayrıca kaydedilir.
+        var lastReason = "yanıt gelmedi"
+        for (attempt in 1..2) {
+            unbind()
+            val outcome = bindOnce(BIND_TIMEOUT_MS)
+            if (outcome.service != null) return outcome.service
+            lastReason = outcome.reason
+            // Bağlanma sırasında özel bir hata varsa tekrar denemenin anlamı yok.
+            if (outcome.fatal) break
+        }
         unbind()
-        val bound = withTimeoutOrNull(12_000) {
+        throw ShizukuUnavailableException("Shizuku komut servisi başlatılamadı ($lastReason).")
+    }
+
+    private class BindOutcome(val service: IShellService?, val reason: String, val fatal: Boolean = false)
+
+    private suspend fun bindOnce(timeoutMs: Long): BindOutcome {
+        var failure: String? = null
+        var fatal = false
+        val bound = withTimeoutOrNull(timeoutMs) {
             withContext(Dispatchers.Main.immediate) {
                 suspendCancellableCoroutine<IShellService?> { cont ->
                     val conn = object : ServiceConnection {
@@ -215,8 +245,9 @@ class ShizukuService(context: Context) : ShizukuAccess {
                                 val s = IShellService.Stub.asInterface(binder)
                                 service = s
                                 if (cont.isActive) cont.resume(s)
-                            } else if (cont.isActive) {
-                                cont.resume(null)
+                            } else {
+                                failure = "servis bağlandı ancak yanıt vermiyor"
+                                if (cont.isActive) cont.resume(null)
                             }
                         }
 
@@ -224,18 +255,36 @@ class ShizukuService(context: Context) : ShizukuAccess {
                             service = null
                             identity = null
                         }
+
+                        override fun onNullBinding(name: ComponentName?) {
+                            failure = "servis boş bağlantı döndürdü"
+                            if (cont.isActive) cont.resume(null)
+                        }
+
+                        override fun onBindingDied(name: ComponentName?) {
+                            failure = "servis süreci başlarken öldü"
+                            service = null
+                            if (cont.isActive) cont.resume(null)
+                        }
                     }
                     connection = conn
                     cont.invokeOnCancellation { unbind() }
                     try {
                         Shizuku.bindUserService(args, conn)
-                    } catch (_: Throwable) {
+                    } catch (e: Throwable) {
+                        failure = "bağlanma hatası: ${e.javaClass.simpleName}" +
+                            (e.message?.let { ": $it" } ?: "")
+                        fatal = true
                         if (cont.isActive) cont.resume(null)
                     }
                 }
             }
         }
-        return bound ?: throw ShizukuUnavailableException("Shizuku komut servisi başlatılamadı (zaman aşımı).")
+        return when {
+            bound != null -> BindOutcome(bound, "")
+            failure != null -> BindOutcome(null, failure!!, fatal)
+            else -> BindOutcome(null, "${timeoutMs / 1000} sn içinde yanıt gelmedi; Shizuku'yu yeniden başlatıp tekrar deneyin")
+        }
     }
 
     private fun unbind() {
@@ -250,5 +299,6 @@ class ShizukuService(context: Context) : ShizukuAccess {
 
     private companion object {
         const val REQUEST_CODE = 4242
+        const val BIND_TIMEOUT_MS = 15_000L
     }
 }

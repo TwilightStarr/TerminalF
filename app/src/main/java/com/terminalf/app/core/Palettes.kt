@@ -30,29 +30,31 @@ data class AppPalette(
     val logoB: Long,
 )
 
-/** Hazır temalar. Varsayılan: [monoDark] (siyah-beyaz). */
+/** Hazır temalar. Varsayılan: [monoDark] (sade siyah). */
 object AppPalettes {
     const val DEFAULT_ID = "mono_dark"
 
     val monoDark = AppPalette(
         id = "mono_dark",
-        name = "Siyah & Beyaz",
+        name = "Sade Siyah",
         isDark = true,
-        bg = 0xFF000000,
-        surface = 0xFF0D0D0D,
-        surfaceHigh = 0xFF181818,
-        outline = 0xFF2A2A2A,
-        text = 0xFFFAFAFA,
-        muted = 0xFF8E8E8E,
-        primary = 0xFFFFFFFF,
-        secondary = 0xFFB4B4B4,
-        good = 0xFFFFFFFF,
-        warn = 0xFFFFB84D,
-        danger = 0xFFFF6B6B,
-        logoFrameA = 0xFF000000,
-        logoFrameB = 0xFF1B1B1B,
-        logoA = 0xFFFFFFFF,
-        logoB = 0xFFBDBDBD,
+        // Saf siyah yerine çok hafif sıcak-nötr kömür tonları: göz yormaz, kartlar zeminden
+        // belli belirsiz ayrılır; vurgu yumuşak kırık beyaz, durum renkleri bastırılmış.
+        bg = 0xFF0B0B0C,
+        surface = 0xFF131315,
+        surfaceHigh = 0xFF1B1B1E,
+        outline = 0xFF26262A,
+        text = 0xFFF2F2F3,
+        muted = 0xFF8C8C93,
+        primary = 0xFFF2F2F3,
+        secondary = 0xFFA6A6AD,
+        good = 0xFFE4E4E7,
+        warn = 0xFFE8B661,
+        danger = 0xFFE5766E,
+        logoFrameA = 0xFF0B0B0C,
+        logoFrameB = 0xFF1B1B1E,
+        logoA = 0xFFF2F2F3,
+        logoB = 0xFFB4B4BB,
     )
 
     val monoLight = AppPalette(

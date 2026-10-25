@@ -240,7 +240,7 @@ class PalettesTest {
         assertTrue(AppPalettes.all.size >= 15)
         assertEquals("mono_dark", AppPalettes.DEFAULT_ID)
         assertEquals(AppPalettes.DEFAULT_ID, AppPalettes.byId("yok_boyle_bir_tema").id)
-        assertEquals(0xFFFFFFFFL, AppPalettes.monoDark.primary)
+        assertEquals(0xFFF2F2F3L, AppPalettes.monoDark.primary)
     }
 
     @Test fun logoColors() {

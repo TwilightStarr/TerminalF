@@ -229,10 +229,17 @@ fun AppearancePage(settings: AppSettings, onBack: () -> Unit) {
                 colors = appSliderColors(),
             )
             Text("Üstteki çubuk rengi, alttaki açıklığı belirler.", color = c.muted, fontSize = 12.5.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Ana ekran simgesi, uygulamadan çıkınca seçtiğin renge en yakın hazır simgeyle güncellenir " +
+                    "(bazı başlatıcılarda birkaç saniye sürebilir).",
+                color = c.muted,
+                fontSize = 12.5.sp,
+            )
         }
         Spacer(Modifier.height(18.dp))
         SoftButton(
-            label = "Varsayılana Dön (Siyah & Beyaz)",
+            label = "Varsayılana Dön (Sade Siyah)",
             icon = Icons.Rounded.RestartAlt,
             onClick = {
                 Haptics.tap()

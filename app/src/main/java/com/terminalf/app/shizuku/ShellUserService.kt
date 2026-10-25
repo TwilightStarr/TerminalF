@@ -5,8 +5,6 @@ import androidx.annotation.Keep
 import com.terminalf.app.core.EXIT_MARKER
 import com.terminalf.app.core.parseWrappedOutput
 import com.terminalf.app.core.wrapForShell
-import com.terminalf.app.data.ProcessRunner
-import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
 
 /**
@@ -28,16 +26,55 @@ class ShellUserService() : IShellService.Stub() {
     override fun exec(command: String, timeoutSeconds: Int): String {
         return try {
             val timeoutMs = timeoutSeconds.coerceIn(1, 600) * 1000L
-            val r = runBlocking {
-                ProcessRunner.run(listOf("sh", "-c", wrapForShell(command)), timeoutMs)
+            // Bu süreç Shizuku tarafından ayrı başlatılır: coroutine/Android bağımlılığı olmadan,
+            // yalnızca düz Java süreç API'siyle çalışır (sınıf yükleme riski en aza iner).
+            val process = ProcessBuilder("sh", "-c", wrapForShell(command))
+                .redirectErrorStream(true)
+                .start()
+            try {
+                process.outputStream.close()
+            } catch (_: Exception) {
             }
-            val parsed = parseWrappedOutput(r.stdout)
-            val body = if (parsed.output.length > MAX_CHARS) {
+            val out = java.io.ByteArrayOutputStream()
+            val reader = Thread {
+                try {
+                    val buf = ByteArray(4096)
+                    while (true) {
+                        val n = process.inputStream.read(buf)
+                        if (n < 0) break
+                        synchronized(out) { out.write(buf, 0, n) }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            reader.isDaemon = true
+            reader.start()
+
+            val deadline = System.nanoTime() + timeoutMs * 1_000_000L
+            var exit: Int? = null
+            var timedOut = false
+            while (exit == null) {
+                try {
+                    exit = process.exitValue()
+                } catch (_: IllegalThreadStateException) {
+                    if (System.nanoTime() > deadline) {
+                        timedOut = true
+                        process.destroy()
+                        break
+                    }
+                    Thread.sleep(15)
+                }
+            }
+            reader.join(2000)
+            val raw = synchronized(out) { out.toString("UTF-8") }
+            val parsed = parseWrappedOutput(raw)
+            val text = if (parsed.output.length > MAX_CHARS) {
                 parsed.output.substring(0, MAX_CHARS) + "\n…(çıktı kısaltıldı)"
             } else {
                 parsed.output
             }
-            "$body\n$EXIT_MARKER:${parsed.exitCode ?: r.exitCode}"
+            val code = if (timedOut) 124 else (parsed.exitCode ?: exit ?: 1)
+            "$text\n$EXIT_MARKER:$code"
         } catch (e: Exception) {
             "${e.message ?: e.javaClass.simpleName}\n$EXIT_MARKER:124"
         }

@@ -11,6 +11,7 @@ import com.terminalf.app.data.BatteryService
 import com.terminalf.app.data.BrightnessService
 import com.terminalf.app.data.CatalogService
 import com.terminalf.app.data.DeviceService
+import com.terminalf.app.data.LauncherIconService
 import com.terminalf.app.data.NetworkService
 import com.terminalf.app.data.NotificationService
 import com.terminalf.app.data.RootService
@@ -45,9 +46,10 @@ class AppContainer(context: Context) {
     val appsService = AppsService(appContext)
     val storage = StorageService(appContext)
     val device = DeviceService()
-    val network = NetworkService()
+    val network = NetworkService(appContext)
     val brightness = BrightnessService(activityBridge)
     val notifier = NotificationService(appContext, activityBridge)
+    val launcherIcons = LauncherIconService(appContext)
 
     val root = RootService()
     val shizuku = ShizukuService(appContext)
@@ -77,7 +79,11 @@ class AppContainer(context: Context) {
         monitor.start()
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = live.onForeground()
-            override fun onStop(owner: LifecycleOwner) = live.onBackground()
+            override fun onStop(owner: LifecycleOwner) {
+                live.onBackground()
+                // Ana ekran simgesi seçili logoya uysun (çalışırken değiştirmek uygulamayı kapatabilir).
+                launcherIcons.apply(settings.logoColors)
+            }
         })
     }
 }

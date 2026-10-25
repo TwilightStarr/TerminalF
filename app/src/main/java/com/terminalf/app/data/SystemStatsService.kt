@@ -1,5 +1,6 @@
 package com.terminalf.app.data
 
+import android.os.SystemClock
 import com.terminalf.app.core.DiskInfo
 import com.terminalf.app.core.MemInfo
 import com.terminalf.app.core.parseDfOutput
@@ -14,6 +15,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Cihazın GERÇEK (yalnızca uygulamaya ait değil) bellek, depolama ve çalışma süresi bilgisi.
@@ -23,6 +25,8 @@ import kotlin.time.Duration
 class SystemStatsService(
     private val procMeminfo: File = File("/proc/meminfo"),
     private val procUptime: File = File("/proc/uptime"),
+    /** Açılıştan beri geçen süre (ms, derin uyku dahil). Android 16'da /proc/uptime okunamayabilir. */
+    private val bootElapsedMs: () -> Long = { SystemClock.elapsedRealtime() },
 ) : SystemStatsReader {
 
     override suspend fun read(): SystemStats = coroutineScope {
@@ -57,6 +61,14 @@ class SystemStatsService(
     }
 
     private suspend fun uptime(): Duration? = withContext(Dispatchers.IO) {
+        // 1) Resmî API: SystemClock.elapsedRealtime() = cihazın açılışından beri süre.
+        val ms = try {
+            bootElapsedMs()
+        } catch (_: Throwable) {
+            0L
+        }
+        if (ms > 0L) return@withContext ms.milliseconds
+        // 2) Yedek: /proc/uptime (yeni Android sürümlerinde SELinux nedeniyle okunamayabilir).
         try {
             parseUptime(procUptime.readText())
         } catch (_: Exception) {
