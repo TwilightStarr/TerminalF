@@ -123,11 +123,12 @@ enum class ResolutionMethod(val json: String) {
  * Android GameManager güç profili. `Battery` en serin, `Performance` en sıcak profildir;
  * birçok cihazda `Performance` işlemci/GPU hızını yükseltir.
  */
-enum class GamePower(val arg: String, val label: String, val hint: String) {
-    Battery("battery", "Serin (pil)", "Sistem oyunu enerji tasarruflu çalıştırır; ısınma en az."),
-    Standard("standard", "Standart", "Üreticinin varsayılan oyun davranışı."),
+enum class GamePower(val arg: String, val code: Int, val label: String, val hint: String) {
+    Battery("battery", 3, "Serin (pil)", "Sistem oyunu enerji tasarruflu çalıştırır; ısınma en az."),
+    Standard("standard", 1, "Standart", "Üreticinin varsayılan oyun davranışı."),
     Performance(
         "performance",
+        2,
         "Performans",
         "İşlemci/GPU daha çok çalışır; daha akıcı ama belirgin daha sıcak.",
     ),
@@ -396,6 +397,21 @@ data class SettingKey(
     val readCommand: String get() = "settings get $namespace $key"
 }
 
+/** Animasyon ölçeğinin Android varsayılanı. */
+const val kAnimationDefault = "1.0"
+
+/**
+ * Animasyon anlık görüntüsü için güvenli değer. Ayar yoksa ya da 0 ise (önceki bir oturumun
+ * bıraktığı kalıntı olabilir) varsayılan 1.0 kullanılır; böylece geri alma animasyonları
+ * kapalı bırakmaz.
+ */
+fun healAnimationValue(old: String?): String {
+    val v = old?.trim()
+    if (v.isNullOrEmpty()) return kAnimationDefault
+    val d = v.toDoubleOrNull() ?: return kAnimationDefault
+    return if (d <= 0.0) kAnimationDefault else v
+}
+
 /** Animasyon ölçekleri (oyun boyunca 0'a çekilir). */
 val kAnimationKeys: List<SettingKey> = listOf(
     SettingKey("global", "window_animation_scale"),
@@ -589,7 +605,7 @@ fun buildApplySteps(
         GameStep(
             "Oyun profili (${config.targetFps} FPS sınırı" +
                 (if (perGameScale) ", %${Math.round(config.scale * 100)} çözünürlük" else "") + ")",
-            "cmd game set --mode $mode --fps ${config.targetFps}" +
+            "cmd game set --mode ${config.powerProfile.code} --fps ${config.targetFps}" +
                 (if (perGameScale) " --downscale ${downscaleArg(config.scale)}" else "") + " $pkg",
             optional = true,
         ),
@@ -728,7 +744,9 @@ fun buildRevertSteps(session: GameSession): List<GameStep> {
     if (refresh.isNotEmpty()) {
         steps.add(GameStep("Ekran yenileme ayarlarını geri al", refresh.joinToString("; ")))
     }
-    val anim = restoreCommands(session, kAnimationKeys)
+    val anim = kAnimationKeys
+        .filter { session.settings.containsKey(it.id) }
+        .map { "settings put ${it.namespace} ${it.key} ${healAnimationValue(session.settings[it.id])}" }
     if (anim.isNotEmpty()) {
         steps.add(GameStep("Animasyon ayarlarını geri al", anim.joinToString("; ")))
     }
@@ -820,4 +838,49 @@ fun scaleIndex(scale: Double): Int {
         }
     }
     return best
+}
+
+
+/**
+ * Acil sıfırlama: oturum kaydı olmasa bile oyun modunun değiştirebildiği ayarları güvenli
+ * varsayılanlara döndürür (animasyonlar 1.0, ekran Hz kilidi kalkar, oyun profili sıfırlanır).
+ * Ekran çözünürlüğü ve işlemci sınırı da sıfırlanır. Rahatsız Etme, parlaklık ve Pil Tasarrufu
+ * kullanıcının kendi tercihi olabileceğinden yalnızca oturum kaydı varsa eski değerine döner.
+ */
+fun buildSafeResetSteps(packageName: String?): List<GameStep> {
+    val steps = ArrayList<GameStep>()
+    steps.add(
+        GameStep(
+            "Animasyonları varsayılana döndür",
+            kAnimationKeys.joinToString("; ") { "settings put ${it.namespace} ${it.key} $kAnimationDefault" },
+            optional = true,
+        ),
+    )
+    steps.add(
+        GameStep(
+            "Ekran yenileme kilidini kaldır",
+            kRefreshKeys.joinToString("; ") { "settings delete ${it.namespace} ${it.key}" },
+            optional = true,
+        ),
+    )
+    steps.add(GameStep("Sabit performans modunu kapat", kFixedPerfOff, optional = true))
+    steps.add(GameStep("Ekran çözünürlüğünü sıfırla", "wm size reset; wm density reset", optional = true))
+    steps.add(
+        GameStep(
+            "İşlemci hız sınırını kaldır (root)",
+            "for p in /sys/devices/system/cpu/cpufreq/policy*; do " +
+                "cat \$p/cpuinfo_max_freq > \$p/scaling_max_freq; done",
+            optional = true,
+        ),
+    )
+    if (packageName != null && isSafePackage(packageName)) {
+        steps.add(
+            GameStep(
+                "Oyun profilini sıfırla",
+                "cmd game reset $packageName; cmd game mode standard $packageName",
+                optional = true,
+            ),
+        )
+    }
+    return steps
 }

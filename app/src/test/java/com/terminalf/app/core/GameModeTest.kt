@@ -60,7 +60,7 @@ class GameCommandsTest {
     @Test fun defaults() {
         val c = cmds(GameModeConfig()).map { it.command }
         assertTrue("am kill-all" in c)
-        assertTrue(c.any { it.startsWith("cmd game set --mode performance --fps 90 --downscale 0.6 ") })
+        assertTrue(c.any { it.startsWith("cmd game set --mode 2 --fps 90 --downscale 0.6 ") })
         assertTrue(c.any { it == "cmd game mode performance $DEF" })
         assertTrue(c.any { it.contains("min_refresh_rate 90.0") })
         assertFalse(c.any { it.startsWith("wm size") })
@@ -221,7 +221,7 @@ class GamePresetsTest {
         val steps = buildRevertSteps(s)
         val anim = steps.first { it.command.contains("window_animation_scale") }.command
         assertTrue(anim.contains("settings put global window_animation_scale 1.0"))
-        assertTrue(anim.contains("settings delete global transition_animation_scale"))
+        assertTrue(anim.contains("settings put global transition_animation_scale 1.0"))
         assertTrue(anim.contains("settings put global animator_duration_scale 0.5"))
         assertTrue(steps.any { it.command == "settings put global zen_mode 0" })
     }
@@ -310,10 +310,27 @@ class GameBrightnessCpuTest {
     }
 }
 
+class AnimationHealTest {
+    @Test fun zeroOrMissingBecomesDefault() {
+        assertEquals("1.0", healAnimationValue(null))
+        assertEquals("1.0", healAnimationValue("0"))
+        assertEquals("1.0", healAnimationValue("0.0"))
+        assertEquals("0.5", healAnimationValue("0.5"))
+    }
+
+    @Test fun safeResetWorksWithoutSession() {
+        val c = buildSafeResetSteps(DEF).map { it.command }
+        assertTrue(c.any { it.contains("settings put global window_animation_scale 1.0") })
+        assertTrue(c.any { it.contains("settings delete system peak_refresh_rate") })
+        assertTrue(c.any { it.startsWith("cmd game reset $DEF") })
+        assertTrue(c.any { it == "wm size reset; wm density reset" })
+    }
+}
+
 class GamePowerTest {
     @Test fun coolProfile() {
         val c = cmds(GameModeConfig(powerProfile = GamePower.Battery)).map { it.command }
-        assertTrue(c.any { it.startsWith("cmd game set --mode battery ") })
+        assertTrue(c.any { it.startsWith("cmd game set --mode 3 ") })
         assertTrue(c.any { it == "cmd game mode battery $DEF" })
     }
 

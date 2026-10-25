@@ -213,6 +213,14 @@ fun GamePage(control: ControlController, game: GameModeController) {
         }
     }
 
+    fun resetAll() {
+        scope.launch {
+            val result = game.forceReset()
+            control.reportDone("Her şey eski haline döndürüldü", result.summary, ok = result.ok)
+            toast.show(if (result.ok) "Her şey eski haline döndü" else result.summary)
+        }
+    }
+
     fun pickGame() {
         scope.launch {
             val existing = game.games.map { it.packageName }.toSet()
@@ -278,6 +286,7 @@ fun GamePage(control: ControlController, game: GameModeController) {
                 onStart = { start(launchGame = true) },
                 onApply = { start(launchGame = false) },
                 onStop = { stop() },
+                onReset = { resetAll() },
             )
             if (busy) {
                 Spacer(Modifier.height(12.dp))
@@ -856,6 +865,7 @@ private fun GameHeroCard(
     onStart: () -> Unit,
     onApply: () -> Unit,
     onStop: () -> Unit,
+    onReset: () -> Unit,
 ) {
     val c = AppTheme.colors
     val ready = control.ready
@@ -974,6 +984,14 @@ private fun GameHeroCard(
                 color = if (game.active) c.warn else null,
             )
         }
+        Spacer(Modifier.height(10.dp))
+        SoftButton(
+            label = "Her Şeyi Eski Haline Döndür",
+            onClick = if (busy) null else onReset,
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Rounded.Refresh,
+            color = c.warn,
+        )
     }
 }
 

@@ -18,6 +18,8 @@ import com.terminalf.app.core.asList
 import com.terminalf.app.core.asMap
 import com.terminalf.app.core.buildApplySteps
 import com.terminalf.app.core.buildRevertSteps
+import com.terminalf.app.core.buildSafeResetSteps
+import com.terminalf.app.core.healAnimationValue
 import com.terminalf.app.core.buildWatchdogKill
 import com.terminalf.app.core.buildWatchdogLaunch
 import com.terminalf.app.core.buildWatchdogScript
@@ -617,6 +619,34 @@ class GameModeController(
         }
     }
 
+    /**
+     * Acil sıfırlama: açık oturum varsa önce onu geri alır, sonra oturum olsun olmasın güvenli
+     * varsayılanları yazar. "Geri alınacak bir şey yok" durumunda bile telefonu düzeltir.
+     */
+    suspend fun forceReset(): GameRunResult {
+        if (!control.ready) return GameRunResult(emptyList(), note = "Önce tam kontrolü etkinleştirin.")
+        if (busy) return GameRunResult(emptyList(), note = "Başka bir işlem sürüyor.")
+        busy = true
+        notifyChanged()
+        try {
+            read(buildWatchdogKill())
+            watchdogAlive = false
+            val results = ArrayList<GameStepResult>()
+            if (sessionState != null) results.addAll(revertInternal().steps)
+            results.addAll(runSteps(buildSafeResetSteps(selected ?: sessionState?.packageName)))
+            read(kWatchdogClearMark)
+            sessionState = null
+            persistSession(null)
+            val r = GameRunResult(results)
+            lastResult = r
+            refreshDisplayHz()
+            return r
+        } finally {
+            busy = false
+            notifyChanged()
+        }
+    }
+
     private suspend fun revertInternal(): GameRunResult {
         val session = sessionState ?: return GameRunResult(emptyList())
         // İzleyici, geri alma sırasında araya girmesin.
@@ -648,6 +678,10 @@ class GameModeController(
         if (cfg.dimScreen) keys.addAll(kBrightnessKeys)
         for (key in keys) {
             settings[key.id] = normalizeSettingValue(read(key.readCommand))
+        }
+        // Kalıntı 0 ya da boş animasyon değeri, geri almada animasyonları kapalı bırakırdı.
+        for (key in kAnimationKeys) {
+            if (settings.containsKey(key.id)) settings[key.id] = healAnimationValue(settings[key.id])
         }
 
         var angle: AngleSelection? = null
