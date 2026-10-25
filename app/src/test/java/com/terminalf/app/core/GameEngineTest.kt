@@ -275,4 +275,20 @@ class GameKindTest {
         assertEquals(GraphicsBackend.Default, rec.backend)
         assertFalse(rec.fixedPerf)
     }
+
+    @Test fun bedrockLiteCommandIsSafeAndScoped() {
+        assertNull(buildBedrockLiteCommand(kBedrockPackage, 0, false))
+        assertNull(buildBedrockLiteCommand("com.other.game", 8, false))
+        val cmd = buildBedrockLiteCommand(kBedrockPackage, 8, true)!!
+        assertTrue(cmd.startsWith("am force-stop $kBedrockPackage"))
+        assertTrue(cmd.contains("gfx_viewdistance:8"))
+        assertNotNull(buildBedrockRestoreCommand(kBedrockPackage))
+        assertNull(buildBedrockRestoreCommand("com.other.game"))
+    }
+
+    @Test fun highEndSocDetection() {
+        assertTrue(isHighEndSoc("mt6989", ""))
+        assertTrue(isHighEndSoc("qcom", "SM8650"))
+        assertFalse(isHighEndSoc("mt6765", ""))
+    }
 }

@@ -191,8 +191,11 @@ class GameModeController(
     /** Seçili oyunun türü (yalnızca ipucu ve önerilen ayar için). */
     val kind: GameKind get() = detectGameKind(config.packageName)
 
+    /** Üst seviye yonga mı (uygulama açılışında ayarlanır; yalnızca öneriyi inceltir). */
+    var highEndDevice: Boolean = false
+
     /** Seçili oyunun türüne göre önerilen ayar (yoksa `null`). */
-    val recommended: GameModeConfig? get() = recommendedConfig(kind, config)
+    val recommended: GameModeConfig? get() = recommendedConfig(kind, config, highEndDevice)
 
     /** Oyun modu şu an açık mı (geri alınacak bir şey var mı)? */
     val active: Boolean get() = sessionState != null

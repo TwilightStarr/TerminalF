@@ -388,6 +388,7 @@ private fun batteryColor(percent: Int, charging: Boolean): Color {
 
 @Composable
 private fun HomeHeader(control: ControlController, onTapStatus: () -> Unit) {
+    control.observe()
     val c = AppTheme.colors
     val ready = control.ready
     val color = if (control.checking) c.muted else (if (ready) c.good else c.warn)

@@ -77,6 +77,7 @@ import com.terminalf.app.core.GameKind
 import com.terminalf.app.core.GamePreset
 import com.terminalf.app.core.GraphicsBackend
 import com.terminalf.app.core.ResolutionMethod
+import com.terminalf.app.core.kBedrockViewChoices
 import com.terminalf.app.core.autoLockHz
 import com.terminalf.app.core.kBedrockFpsCap
 import com.terminalf.app.core.kBedrockPackage
@@ -393,6 +394,7 @@ private fun presetIcon(i: Int): ImageVector = when (i) {
 /** Dört açılır-kapanır ayar grubu (Performans, Ekran, Sistem, Isı ve güvenlik). */
 @Composable
 private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Boolean) {
+    game.observe()
     fun set(next: GameModeConfig) = game.updateConfig(next)
 
     val screenOn = ArrayList<String>()
@@ -417,7 +419,8 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
     GameGroup(
         icon = Icons.Rounded.Speed,
         title = "Performans",
-        summary = "${cfg.targetFps} FPS · ${scaleLabel(cfg.scale)} · ${cfg.powerProfile.label}",
+        summary = "${cfg.targetFps} FPS · ${scaleLabel(cfg.scale)} · ${cfg.powerProfile.label}" +
+            (if (cfg.bedrockViewDistance > 0) " · görüş ${cfg.bedrockViewDistance}" else ""),
     ) {
         GameLabel("Kare hızı üst sınırı")
         Spacer(Modifier.height(8.dp))
@@ -469,6 +472,31 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
                     "Daha güçlü ve her cihazda çalışır, ama telefonun tamamı geçici olarak " +
                         "düşük çözünürlüğe geçer. Oyun bitince Geri Al'a basın."
                 },
+            )
+        }
+        if (cfg.packageName.startsWith("com.mojang.minecraft")) {
+            Spacer(Modifier.height(6.dp))
+            GameHint(
+                "Minecraft'ta çözünürlük düşürme görüntüyü ekranın köşesine sıkıştırdığı için " +
+                    "uygulanmaz. Bunun yerine aşağıdaki görüş mesafesi ayarını kullanın.",
+            )
+        }
+        if (game.kind == GameKind.MinecraftBedrock) {
+            Spacer(Modifier.height(16.dp))
+            GameLabel("Minecraft görüş mesafesi (FPS ve ısı için en etkili ayar)")
+            Spacer(Modifier.height(8.dp))
+            GameChoices(
+                values = kBedrockViewChoices,
+                selected = cfg.bedrockViewDistance,
+                label = { v: Int -> if (v == 0) "Dokunma" else "$v parça" },
+                onSelected = enabledIf(!busy) { v: Int -> set(cfg.copy(bedrockViewDistance = v)) },
+            )
+            Spacer(Modifier.height(6.dp))
+            GameHint(
+                "Oyun açılmadan önce seçenek dosyasında görüş mesafesi düşürülür; süslü grafik, " +
+                    "süslü gökyüzü ve saydam yapraklar kapanır. İşlemci ve GPU yükü azalır, bu da " +
+                    "hem kare hızını sabit tutar hem ısıyı düşürür. Oyun bitince dosya eski haline " +
+                    "döner. Oyunu bu ayardan sonra açın (açıksa yeniden başlatılır).",
             )
         }
         Spacer(Modifier.height(16.dp))
@@ -678,6 +706,7 @@ private fun openPlayStore(context: android.content.Context, pkg: String) {
 /** Grafik motoru: sürücü arka ucu, sabit performans, önceden derleme ve türe özel ipuçları. */
 @Composable
 private fun EngineGroup(game: GameModeController, cfg: GameModeConfig, busy: Boolean) {
+    game.observe()
     val c = AppTheme.colors
     val scope = rememberCoroutineScope()
     val toast = LocalToaster.current
@@ -825,6 +854,7 @@ private fun GameEmptyHero(onAdd: () -> Unit) {
 
 @Composable
 private fun GameStrip(game: GameModeController, busy: Boolean, onAdd: () -> Unit) {
+    game.observe()
     val scope = rememberCoroutineScope()
     val games = game.games
     val selectedPkg = game.selectedPackage
@@ -867,6 +897,8 @@ private fun GameHeroCard(
     onStop: () -> Unit,
     onReset: () -> Unit,
 ) {
+    control.observe()
+    game.observe()
     val c = AppTheme.colors
     val ready = control.ready
     val busy = game.busy
@@ -997,6 +1029,7 @@ private fun GameHeroCard(
 
 @Composable
 private fun GamePresetList(game: GameModeController, busy: Boolean) {
+    game.observe()
     val c = AppTheme.colors
     val cfg = game.config
     var matched: GamePreset? = null
@@ -1058,6 +1091,7 @@ private fun GamePresetList(game: GameModeController, busy: Boolean) {
 
 @Composable
 private fun GameSuggestionCard(game: GameModeController, busy: Boolean) {
+    game.observe()
     val c = AppTheme.colors
     val sug = game.suggestion ?: return
     val pct = (sug.scale * 100).roundToInt()
@@ -1081,6 +1115,7 @@ private fun GameSuggestionCard(game: GameModeController, busy: Boolean) {
 
 @Composable
 private fun GameReportCard(game: GameModeController) {
+    game.observe()
     val c = AppTheme.colors
     val s = game.stats
     val d = game.diagnosis

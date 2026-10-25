@@ -181,6 +181,12 @@ data class GameModeConfig(
     val dimPercent: Int = 60,
     /** İşlemci hız sınırı: donanım azami hızının yüzdesi (40-95). */
     val cpuCapPercent: Int = 70,
+    /**
+     * Minecraft Bedrock için görüş mesafesi (parça). 0 = oyunun ayarlarına dokunma. 0'dan büyükse
+     * oyun açılmadan önce seçenek dosyasında görüş mesafesi düşürülür ve ağır görsel efektler
+     * kapatılır (FPS'i artırır, ısıyı azaltır); oyun bitince dosya eski haline döner.
+     */
+    val bedrockViewDistance: Int = 0,
 ) {
     val reducesResolution: Boolean get() = scale < 0.999
 
@@ -214,6 +220,7 @@ data class GameModeConfig(
         "refreshHz" to refreshHz,
         "dimPercent" to dimPercent,
         "cpuCapPercent" to cpuCapPercent,
+        "bedrockViewDistance" to bedrockViewDistance,
     )
 
     fun encode(): String = Json.stringify(toJson())
@@ -252,6 +259,7 @@ data class GameModeConfig(
                 refreshHz = json.int("refreshHz")?.takeIf { it in kHzChoices } ?: 0,
                 dimPercent = (json.int("dimPercent") ?: 60).coerceIn(20, 90),
                 cpuCapPercent = (json.int("cpuCapPercent") ?: 70).coerceIn(40, 95),
+                bedrockViewDistance = (json.int("bedrockViewDistance") ?: 0).let { if (it in kBedrockViewChoices) it else 0 },
             )
         }
 
@@ -575,6 +583,45 @@ fun downscaleArg(scale: Double): String {
     return if (text.endsWith("0")) text.substring(0, text.length - 1) else text
 }
 
+/** Bedrock görüş mesafesi seçenekleri (0 = dokunma). */
+val kBedrockViewChoices: List<Int> = listOf(0, 6, 8, 10, 12)
+
+/** Minecraft Bedrock paketi mi? */
+fun isBedrockPackage(pkg: String): Boolean = pkg.startsWith("com.mojang.minecraftpe")
+
+/** Bedrock seçenek dosyası (yalnızca oyun kapalıyken değiştirilir). */
+fun bedrockOptionsPath(pkg: String): String =
+    "/sdcard/Android/data/$pkg/files/games/com.mojang/minecraftpe/options.txt"
+
+/**
+ * Bedrock'u hafifleten komut: özgün dosya bir kez yedeklenir, sonra YALNIZCA var olan satırlar
+ * değiştirilir (görüş mesafesi, süslü grafik, süslü gökyüzü, saydam yapraklar). Dosya yoksa
+ * komut başarısız olur (adım "atlandı" görünür). [stopGame] ise önce oyunu kapatır; çalışan
+ * oyun çıkarken dosyanın üzerine yazacağından değişiklik ancak kapalıyken kalıcıdır.
+ */
+fun buildBedrockLiteCommand(pkg: String, viewDistance: Int, stopGame: Boolean): String? {
+    if (!isSafePackage(pkg) || !isBedrockPackage(pkg) || viewDistance <= 0) return null
+    val vd = viewDistance.coerceIn(4, 32)
+    val path = bedrockOptionsPath(pkg)
+    return (if (stopGame) "am force-stop $pkg; " else "") +
+        "OPT=$path; " +
+        "if [ -f \"\$OPT\" ]; then " +
+        "[ -f \"\$OPT.tf_bak\" ] || cp \"\$OPT\" \"\$OPT.tf_bak\"; " +
+        "sed -i -e 's/^gfx_viewdistance:.*/gfx_viewdistance:$vd/' " +
+        "-e 's/^gfx_fancygraphics:.*/gfx_fancygraphics:0/' " +
+        "-e 's/^gfx_fancyskies:.*/gfx_fancyskies:0/' " +
+        "-e 's/^gfx_transparentleaves:.*/gfx_transparentleaves:0/' \"\$OPT\"; " +
+        "else echo options.txt-bulunamadi; exit 1; fi"
+}
+
+/** [buildBedrockLiteCommand]'ın yedeğini geri yazar (yedek yoksa hiçbir şey yapmaz). */
+fun buildBedrockRestoreCommand(pkg: String): String? {
+    if (!isSafePackage(pkg) || !isBedrockPackage(pkg)) return null
+    val path = bedrockOptionsPath(pkg)
+    return "OPT=$path; " +
+        "if [ -f \"\$OPT.tf_bak\" ]; then cp \"\$OPT.tf_bak\" \"\$OPT\" && rm -f \"\$OPT.tf_bak\"; fi"
+}
+
 /**
  * Oyun modunu AÇAN adımlar. [physicalSize]/[physicalDensity] yalnızca
  * [ResolutionMethod.WholeScreen] için, [angle] (mevcut ANGLE seçimi) yalnızca grafik motoru
@@ -599,7 +646,9 @@ fun buildApplySteps(
     }
 
     // Oyun-başına (Android GameManager) üst sınır + çözünürlük.
-    val perGameScale = config.method == ResolutionMethod.PerGame && config.reducesResolution
+    // Minecraft, GameManager downscale ile görüntüyü köşeye sıkıştırıyor; bu oyunlarda uygulanmaz.
+    val downscaleUnsafe = pkg.startsWith("com.mojang.minecraft")
+    val perGameScale = config.method == ResolutionMethod.PerGame && config.reducesResolution && !downscaleUnsafe
     val mode = config.powerProfile.arg
     steps.add(
         GameStep(
@@ -618,6 +667,9 @@ fun buildApplySteps(
         ),
     )
     buildBackendStep(config, angle)?.let { steps.add(it) }
+    buildBedrockLiteCommand(pkg, config.bedrockViewDistance, restartGame)?.let {
+        steps.add(GameStep("Minecraft hafif grafik (görüş mesafesi ${config.bedrockViewDistance})", it, optional = true))
+    }
     if (config.fixedPerf) {
         steps.add(GameStep("Sabit performans modu", kFixedPerfOn, optional = true))
     }
@@ -784,6 +836,9 @@ fun buildRevertSteps(session: GameSession): List<GameStep> {
                 optional = true,
             ),
         )
+    }
+    buildBedrockRestoreCommand(session.packageName)?.let {
+        steps.add(GameStep("Minecraft grafik ayarlarını geri al", it, optional = true))
     }
     return steps
 }

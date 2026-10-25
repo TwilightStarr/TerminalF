@@ -70,6 +70,12 @@ class AppContainer(context: Context) {
         if (started) return
         started = true
         settings.load()
+        game.highEndDevice = try {
+            val soc = if (android.os.Build.VERSION.SDK_INT >= 31) android.os.Build.SOC_MODEL else ""
+            com.terminalf.app.core.isHighEndSoc(android.os.Build.HARDWARE, soc)
+        } catch (_: Exception) {
+            false
+        }
         control.notifier = notifier
         control.taskNotificationsEnabled = { settings.taskNotifications }
         scope.launch { notifier.init() }

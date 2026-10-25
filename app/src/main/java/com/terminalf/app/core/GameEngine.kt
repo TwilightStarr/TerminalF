@@ -211,25 +211,32 @@ fun gameTips(kind: GameKind): List<String> = when (kind) {
  * Türe göre önerilen başlangıç ayarı (paket, yöntem ve özel komutlar korunur); öneri yoksa
  * `null`. Bir deneme noktasıdır, garanti değildir.
  */
-fun recommendedConfig(kind: GameKind, base: GameModeConfig): GameModeConfig? = when (kind) {
+fun recommendedConfig(kind: GameKind, base: GameModeConfig, highEnd: Boolean = false): GameModeConfig? = when (kind) {
     // Bedrock Android'de 60 FPS'e sınırlıdır: 60 üstü hedef yalnızca ısıtır. Serin tutmak için
     // kare hızı 60, ekran 60 Hz'e kilitli, güç profili standart, çözünürlük düşük.
     GameKind.MinecraftBedrock -> base.copy(
         targetFps = kBedrockFpsCap,
-        scale = 0.7,
+        // Düşük çözünürlük (GameManager downscale) Bedrock'ta görüntüyü köşeye sıkıştırıyor: tam çözünürlük.
+        scale = 1.0,
         lockRefreshRate = true,
         refreshHz = 60,
         killBackground = true,
         animationsOff = true,
         dnd = true,
+        // Isınma kare hızını düşüren asıl nedendir: ekran parlaklığı kısılır, güç profili
+        // standart kalır, sabit performans kapalıdır. FPS kazancı görüş mesafesinden gelir.
+        dimScreen = true,
+        dimPercent = if (highEnd) 70 else 60,
         powerProfile = GamePower.Standard,
+        batterySaver = false,
         fixedPerf = false,
-        guardTempC = 40,
+        guardTempC = if (highEnd) 42 else 40,
+        bedrockViewDistance = if (highEnd) 10 else 8,
         backend = GraphicsBackend.Default,
     )
     GameKind.MinecraftJava -> base.copy(
         targetFps = 60,
-        scale = 0.6,
+        scale = 1.0,
         lockRefreshRate = true,
         animationsOff = true,
         dnd = true,
@@ -238,6 +245,20 @@ fun recommendedConfig(kind: GameKind, base: GameModeConfig): GameModeConfig? = w
         backend = GraphicsBackend.Default,
     )
     GameKind.Generic -> null
+}
+
+/**
+ * Üst seviye bir işlemci mi? ([hardware] `Build.HARDWARE`, [soc] `Build.SOC_MODEL`.) Cihaz adı
+ * kullanılmaz; yalnızca amiral gemisi yonga ailesi tanınır (Dimensity 9000 serisi, Snapdragon 8
+ * serisi). Yalnızca önerilen ayarın ısı/FPS dengesini ayarlamak için kullanılır.
+ */
+fun isHighEndSoc(hardware: String, soc: String): Boolean {
+    val h = hardware.lowercase()
+    val m = soc.lowercase()
+    val mediatek = listOf("mt6985", "mt6989", "mt6991", "mt6983", "mt6895")
+    val snapdragon = listOf("sm8450", "sm8475", "sm8550", "sm8650", "sm8750", "kalama", "pineapple", "sun", "taro", "waipio")
+    return mediatek.any { h.startsWith(it) || m.startsWith(it) } ||
+        snapdragon.any { h == it || m == it || m.startsWith(it) }
 }
 
 /** Bedrock'un Android'deki kare hızı sınırı (oyunun kendisi koyar; dışarıdan aşılamaz). */

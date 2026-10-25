@@ -192,6 +192,7 @@ fun OptimizePage(control: ControlController) {
 
 @Composable
 private fun AccessCard(control: ControlController, onClick: () -> Unit) {
+    control.observe()
     val c = AppTheme.colors
     val ready = control.ready
     val color = if (control.checking) c.muted else if (ready) c.good else c.warn
@@ -240,6 +241,7 @@ private fun ProfileCard(
     onApply: () -> Unit,
     onRevert: () -> Unit,
 ) {
+    control.observe()
     val c = AppTheme.colors
     val total = control.toggleCount(profile)
     val active = control.activeCount(profile)
