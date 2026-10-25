@@ -74,7 +74,6 @@ import com.terminalf.app.state.ControlController
 import com.terminalf.app.state.LiveStats
 import com.terminalf.app.state.TweakOutcome
 import com.terminalf.app.ui.components.AppCard
-import com.terminalf.app.ui.components.AppLogo
 import com.terminalf.app.ui.components.FadeSlideIn
 import com.terminalf.app.ui.components.HealthRing
 import com.terminalf.app.ui.components.LocalSheets
@@ -393,18 +392,15 @@ private fun HomeHeader(control: ControlController, onTapStatus: () -> Unit) {
     val ready = control.ready
     val color = if (control.checking) c.muted else (if (ready) c.good else c.warn)
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        AppLogo(size = 46.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                "TerminalF",
-                color = c.text,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.3).sp,
-            )
-            Text("Telefon yönetim merkezi", color = c.muted, fontSize = 13.sp)
-        }
+        Text(
+            "TerminalF",
+            color = c.text,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.4).sp,
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
+        )
         StatusPill(
             label = if (control.checking) "Denetleniyor" else (if (ready) "Kontrol açık" else "Kontrol kapalı"),
             color = color,
