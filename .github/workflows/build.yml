@@ -54,10 +54,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
-      - name: Birim testleri
-        run: ./gradlew --no-daemon :app:testDebugUnitTest
+      # Derleme testi: ana kod + test kodu derlenir, sonra birim testleri kosulur.
+      # --continue: ilk hatada durmaz, tum hatalar rapora girer.
+      - name: Derleme ve birim testleri
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --continue --warning-mode all \
+            :app:compileDebugKotlin :app:compileDebugUnitTestKotlin :app:testDebugUnitTest \
+            2>&1 | tee gradle-build.log
 
       # Opsiyonel: GitHub Secrets tanimliysa surum kalici anahtarla imzalanir
       # (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD).
@@ -89,6 +95,44 @@ jobs:
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk \
              dist/TerminalF-v${{ steps.ver.outputs.version }}.apk
+
+      # Test raporlari: basarili/basarisiz fark etmeksizin "Reports" adiyla yuklenir.
+      # GitHub bir artifact'i zip olarak indirtir -> Actions sayfasindan Reports.zip.
+      - name: Raporlari topla
+        if: always()
+        run: |
+          mkdir -p Reports
+          cp -r app/build/reports        Reports/reports      2>/dev/null || true
+          cp -r app/build/test-results   Reports/test-results 2>/dev/null || true
+          cp gradle-build.log            Reports/             2>/dev/null || true
+          {
+            echo "Calistirma : ${{ github.workflow }} #${{ github.run_number }}"
+            echo "Commit     : ${{ github.sha }}"
+            echo "Sonuc      : ${{ job.status }}"
+            echo
+            echo "== Derleme hatalari / uyarilari (gradle-build.log) =="
+            grep -E '^(e|w): ' gradle-build.log 2>/dev/null || echo "(yok)"
+            echo
+            echo "== Test ozeti =="
+            python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          t = f = e = s = 0
+          for p in glob.glob("app/build/test-results/**/*.xml", recursive=True):
+              r = ET.parse(p).getroot()
+              t += int(r.get("tests", 0)); f += int(r.get("failures", 0))
+              e += int(r.get("errors", 0)); s += int(r.get("skipped", 0))
+          print(f"toplam={t} basarisiz={f} hata={e} atlanan={s}")
+          PY
+          } > Reports/OZET.txt
+          cat Reports/OZET.txt
+
+      - name: Reports.zip yukle
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: Reports
+          path: Reports
+          if-no-files-found: warn
 
       - name: APK'yi yukle
         uses: actions/upload-artifact@v6

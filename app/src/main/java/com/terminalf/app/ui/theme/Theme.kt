@@ -1,7 +1,6 @@
 package com.terminalf.app.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.darkColorScheme
@@ -144,7 +143,9 @@ fun TerminalFTheme(
                 val controller = WindowCompat.getInsetsController(window, view)
                 controller.isAppearanceLightStatusBars = !scheme.isDark
                 controller.isAppearanceLightNavigationBars = !scheme.isDark
+                @Suppress("DEPRECATION")
                 window.statusBarColor = android.graphics.Color.TRANSPARENT
+                @Suppress("DEPRECATION")
                 window.navigationBarColor = scheme.surface.toArgb()
             }
         }

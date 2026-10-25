@@ -23,9 +23,9 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.ReceiptLong
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.ShieldMoon
-import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -131,7 +131,7 @@ fun OptimizePage(control: ControlController) {
                 fontWeight = FontWeight.ExtraBold,
             )
             IconButton(onClick = { scope.launch { sheets.showLogSheet(control) } }) {
-                Icon(Icons.Rounded.ReceiptLong, contentDescription = "İşlem günlüğü", tint = c.muted)
+                Icon(Icons.AutoMirrored.Rounded.ReceiptLong, contentDescription = "İşlem günlüğü", tint = c.muted)
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -278,7 +278,7 @@ private fun ProfileCard(
                 Spacer(Modifier.width(10.dp))
                 SoftButton(
                     label = "Geri Al",
-                    icon = Icons.Rounded.Undo,
+                    icon = Icons.AutoMirrored.Rounded.Undo,
                     onClick = if (control.busy) null else onRevert,
                 )
             }

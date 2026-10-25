@@ -1,6 +1,5 @@
 package com.terminalf.app.ui.pages
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -17,7 +16,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -38,7 +36,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Brightness6
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Vibration
@@ -500,7 +498,7 @@ private fun DeviceMain(
                     NavTile(
                         title = app.name,
                         subtitle = "${app.description}\n${app.sourceLabel}",
-                        trailing = Icons.Rounded.OpenInNew,
+                        trailing = Icons.AutoMirrored.Rounded.OpenInNew,
                         trailingSize = 20.dp,
                         onClick = { container.catalog.openUrl(app.url) },
                         horizontalPadding = 16.dp,

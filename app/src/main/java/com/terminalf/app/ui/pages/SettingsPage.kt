@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsOff
-import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -102,7 +102,7 @@ fun SettingsPage(settings: AppSettings, notifier: Notifier, onBack: () -> Unit) 
             Spacer(Modifier.height(12.dp))
             SoftButton(
                 label = "Test Bildirimi Gönder",
-                icon = Icons.Rounded.Send,
+                icon = Icons.AutoMirrored.Rounded.Send,
                 onClick = {
                     scope.launch {
                         if (!permitted) {

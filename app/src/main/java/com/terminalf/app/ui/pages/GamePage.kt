@@ -31,7 +31,7 @@ import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.ReceiptLong
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.ShieldMoon
@@ -39,7 +39,7 @@ import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -228,7 +228,7 @@ fun GamePage(control: ControlController, game: GameModeController) {
                 fontWeight = FontWeight.ExtraBold,
             )
             IconButton(onClick = { scope.launch { sheets.showLogSheet(control) } }) {
-                Icon(Icons.Rounded.ReceiptLong, contentDescription = "İşlem günlüğü", tint = c.muted)
+                Icon(Icons.AutoMirrored.Rounded.ReceiptLong, contentDescription = "İşlem günlüğü", tint = c.muted)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -688,7 +688,7 @@ private fun GameHeroCard(
                 label = "Geri Al",
                 onClick = if (busy || !game.active) null else onStop,
                 modifier = Modifier.weight(1f),
-                icon = Icons.Rounded.Undo,
+                icon = Icons.AutoMirrored.Rounded.Undo,
                 color = if (game.active) c.warn else null,
             )
         }

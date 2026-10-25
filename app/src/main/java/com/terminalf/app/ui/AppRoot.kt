@@ -42,7 +42,6 @@ import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Tune
 import com.terminalf.app.AppContainer
-import com.terminalf.app.LocalContainer
 import com.terminalf.app.state.Haptics
 import com.terminalf.app.state.Motion
 import com.terminalf.app.ui.components.DialogHost

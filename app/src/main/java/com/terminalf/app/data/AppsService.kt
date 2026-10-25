@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.ui.graphics.ImageBitmap
@@ -35,7 +36,13 @@ class AppsService(context: Context) {
             val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
             val seen = HashSet<String>()
             val result = ArrayList<InstalledApp>()
-            for (info in pm.queryIntentActivities(launcher, 0)) {
+            val launchable = if (Build.VERSION.SDK_INT >= 33) {
+                pm.queryIntentActivities(launcher, PackageManager.ResolveInfoFlags.of(0L))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.queryIntentActivities(launcher, 0)
+            }
+            for (info in launchable) {
                 val ai = info.activityInfo?.applicationInfo ?: continue
                 val pkg = ai.packageName
                 if (!seen.add(pkg)) continue
@@ -47,7 +54,12 @@ class AppsService(context: Context) {
                     pkg
                 }
                 val version = try {
-                    pm.getPackageInfo(pkg, 0).versionName
+                    if (Build.VERSION.SDK_INT >= 33) {
+                        pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0L)).versionName
+                    } else {
+                        @Suppress("DEPRECATION")
+                        pm.getPackageInfo(pkg, 0).versionName
+                    }
                 } catch (_: Exception) {
                     null
                 }
