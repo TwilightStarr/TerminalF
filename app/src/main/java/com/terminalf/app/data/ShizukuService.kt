@@ -1,0 +1,254 @@
+package com.terminalf.app.data
+
+import android.content.ComponentName
+import android.content.Context
+import android.content.ServiceConnection
+import android.content.pm.PackageManager
+import android.os.IBinder
+import com.terminalf.app.BuildConfig
+import com.terminalf.app.core.ShellIdentity
+import com.terminalf.app.core.ShellResult
+import com.terminalf.app.core.parseIdOutput
+import com.terminalf.app.core.parseWrappedOutput
+import com.terminalf.app.shizuku.IShellService
+import com.terminalf.app.shizuku.ShellUserService
+import com.terminalf.app.state.ShizukuAccess
+import com.terminalf.app.state.ShizukuProbe
+import com.terminalf.app.state.ShizukuUnavailableException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import rikka.shizuku.Shizuku
+import kotlin.coroutines.resume
+
+/**
+ * [RootService]'in kök (root) tabanlı yoluna paralel, KÖK GEREKTİRMEYEN ikinci çalıştırma yolu:
+ * Shizuku (https://shizuku.rikka.app).
+ *
+ * Kullanıcının cihazında bir kez yaptığı "Kablosuz hata ayıklama" eşleştirmesi üzerinden Shizuku
+ * bir arka plan servisi başlatır; bu servis çalıştığı sürece bu uygulama `adb shell` ile aynı
+ * yetki seviyesinde komut çalıştırabilir:
+ * - Shizuku normal (rootsuz) başlatıldıysa komutlar "shell" kullanıcısı kimliğiyle çalışır.
+ * - Shizuku kökle başlatıldıysa komutlar root kimliğiyle çalışır.
+ * - Gerçekten tam kök isteyen bazı tweak'ler shell kimliğiyle YİNE DE başarısız olabilir; bu servis
+ *   bunu gizlemez, komutun gerçek çıktısına/çıkış koduna göre hata bildirilir.
+ *
+ * Komutlar Shizuku'nun UserService mekanizmasıyla ([ShellUserService], ayrı süreçte) çalıştırılır;
+ * bu yüzden çıkış kodu GERÇEKTEN okunabilir. Hazır olup olmadığı, gerçek bir `id` komutuyla
+ * kanıtlanır ([probe]).
+ */
+class ShizukuService(context: Context) : ShizukuAccess {
+
+    private val appContext = context.applicationContext
+    private val lock = Mutex()
+
+    @Volatile
+    private var service: IShellService? = null
+
+    @Volatile
+    private var connection: ServiceConnection? = null
+
+    @Volatile
+    override var identity: ShellIdentity? = null
+        private set
+
+    private val args: Shizuku.UserServiceArgs
+        get() = Shizuku.UserServiceArgs(ComponentName(appContext.packageName, ShellUserService::class.java.name))
+            .daemon(false)
+            .processNameSuffix("shell")
+            .debuggable(BuildConfig.DEBUG)
+            .version(BuildConfig.VERSION_CODE)
+
+    /** Cihazda Shizuku servisi kurulu ve çalışıyor mu? */
+    override suspend fun isRunning(): Boolean = try {
+        Shizuku.pingBinder()
+    } catch (_: Throwable) {
+        false
+    }
+
+    /** Uygulamaya daha önce Shizuku izni verilmiş mi? */
+    override suspend fun hasPermission(): Boolean = try {
+        !Shizuku.isPreV11() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+    } catch (_: Throwable) {
+        false
+    }
+
+    /** Kullanıcıya Shizuku izin diyaloğunu gösterir ve sonucu döner. */
+    override suspend fun requestPermission(): Boolean {
+        try {
+            if (!isRunning()) return false
+            if (hasPermission()) return true
+            if (Shizuku.isPreV11()) return false
+            // Kullanıcı daha önce "bir daha sorma" ile reddettiyse diyalog hiç açılmaz.
+            if (Shizuku.shouldShowRequestPermissionRationale()) return false
+        } catch (_: Throwable) {
+            return false
+        }
+        val result = withTimeoutOrNull(120_000) {
+            withContext(Dispatchers.Main.immediate) {
+                suspendCancellableCoroutine<Boolean> { cont ->
+                    val code = REQUEST_CODE
+                    val listener = object : Shizuku.OnRequestPermissionResultListener {
+                        override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
+                            if (requestCode != code) return
+                            Shizuku.removeRequestPermissionResultListener(this)
+                            if (cont.isActive) cont.resume(grantResult == PackageManager.PERMISSION_GRANTED)
+                        }
+                    }
+                    Shizuku.addRequestPermissionResultListener(listener)
+                    cont.invokeOnCancellation {
+                        try {
+                            Shizuku.removeRequestPermissionResultListener(listener)
+                        } catch (_: Throwable) {
+                        }
+                    }
+                    try {
+                        Shizuku.requestPermission(code)
+                    } catch (_: Throwable) {
+                        try {
+                            Shizuku.removeRequestPermissionResultListener(listener)
+                        } catch (_: Throwable) {
+                        }
+                        if (cont.isActive) cont.resume(false)
+                    }
+                }
+            }
+        }
+        return result ?: false
+    }
+
+    /**
+     * Shizuku'nun GERÇEKTEN hazır olduğunu doğrular: servis çalışıyor mu, izin var mı ve `id`
+     * test komutu hangi kimlikle (shell/root) çalışıyor. "Servis çalışıyor + izin var" tek başına
+     * yeterli sayılmaz - komutların gerçekten çalıştığı ancak bu test komutuyla kanıtlanır.
+     */
+    override suspend fun probe(): ShizukuProbe = lock.withLock {
+        identity = null
+        if (!isRunning()) {
+            return@withLock ShizukuProbe(running = false, permitted = false, error = "Shizuku servisi çalışmıyor.")
+        }
+        val preV11 = try {
+            Shizuku.isPreV11()
+        } catch (_: Throwable) {
+            false
+        }
+        if (preV11) {
+            return@withLock ShizukuProbe(
+                running = true,
+                permitted = false,
+                error = "Shizuku sürümü çok eski; Shizuku'yu güncelleyin.",
+            )
+        }
+        if (!hasPermission()) {
+            return@withLock ShizukuProbe(running = true, permitted = false, error = "Shizuku izni verilmedi.")
+        }
+        try {
+            val svc = ensureService()
+            val raw = callExec(svc, "id", 15)
+            val parsed = parseWrappedOutput(raw)
+            val id = parseIdOutput(parsed.output)
+            if (id != null && parsed.exitCode == 0) {
+                identity = id
+                ShizukuProbe(running = true, permitted = true, identity = id)
+            } else {
+                val seen = parsed.output.trim()
+                val short = if (seen.length > 80) seen.substring(0, 80) + "…" else seen
+                ShizukuProbe(
+                    running = true,
+                    permitted = true,
+                    error = "Test komutu (id) beklenen çıktıyı döndürmedi" +
+                        (if (short.isEmpty()) " (boş yanıt)." else " (yanıt: $short)."),
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            ShizukuProbe(
+                running = true,
+                permitted = true,
+                error = "Test komutu (id) çalıştırılamadı: ${e.message ?: e.javaClass.simpleName}",
+            )
+        }
+    }
+
+    /**
+     * [command]'ı Shizuku üzerinden çalıştırır ve sonucunu döner. Servis hazır değilse ya da
+     * Shizuku yanıt vermezse [ShizukuUnavailableException] fırlatır.
+     */
+    override suspend fun exec(command: String): ShellResult {
+        if (identity == null) {
+            val p = probe()
+            if (!p.ready) throw ShizukuUnavailableException(p.error ?: "Shizuku hazır değil.")
+        }
+        val raw = try {
+            callExec(lock.withLock { ensureService() }, command, 60)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ShizukuUnavailableException) {
+            throw e
+        } catch (e: Exception) {
+            service = null
+            identity = null
+            throw ShizukuUnavailableException("Shizuku komutu çalıştıramadı: ${e.message ?: e.javaClass.simpleName}")
+        }
+        return parseWrappedOutput(raw)
+    }
+
+    private suspend fun callExec(svc: IShellService, command: String, timeoutSeconds: Int): String =
+        withContext(Dispatchers.IO) { svc.exec(command, timeoutSeconds) ?: "" }
+
+    /** Bağlı servisi döner; yoksa (ya da süreç öldüyse) yeniden bağlanır. */
+    private suspend fun ensureService(): IShellService {
+        val current = service
+        if (current != null && current.asBinder().pingBinder()) return current
+        unbind()
+        val bound = withTimeoutOrNull(12_000) {
+            withContext(Dispatchers.Main.immediate) {
+                suspendCancellableCoroutine<IShellService?> { cont ->
+                    val conn = object : ServiceConnection {
+                        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+                            if (binder != null && binder.pingBinder()) {
+                                val s = IShellService.Stub.asInterface(binder)
+                                service = s
+                                if (cont.isActive) cont.resume(s)
+                            } else if (cont.isActive) {
+                                cont.resume(null)
+                            }
+                        }
+
+                        override fun onServiceDisconnected(name: ComponentName?) {
+                            service = null
+                            identity = null
+                        }
+                    }
+                    connection = conn
+                    cont.invokeOnCancellation { unbind() }
+                    try {
+                        Shizuku.bindUserService(args, conn)
+                    } catch (_: Throwable) {
+                        if (cont.isActive) cont.resume(null)
+                    }
+                }
+            }
+        }
+        return bound ?: throw ShizukuUnavailableException("Shizuku komut servisi başlatılamadı (zaman aşımı).")
+    }
+
+    private fun unbind() {
+        val conn = connection ?: return
+        connection = null
+        service = null
+        try {
+            Shizuku.unbindUserService(args, conn, true)
+        } catch (_: Throwable) {
+        }
+    }
+
+    private companion object {
+        const val REQUEST_CODE = 4242
+    }
+}

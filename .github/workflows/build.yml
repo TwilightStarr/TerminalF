@@ -1,0 +1,107 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+    # Yalnizca dokuman degisince yeni surum cikmasin.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # yalnizca v* etiketinde Release olusturmak icin
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false   # yayin sirasi bozulmasin
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # surum hesabi icin tum etiketler gerekli
+
+      # Surum otomatik hesaplanir (ilk surum 2.0.0):
+      #   commit mesajinda [major] -> X+1.0.0
+      #   commit mesajinda [minor] -> X.Y+1.0
+      #   aksi halde               -> X.Y.Z+1 (yama)
+      # 2.0.0'dan kucuk eski etiketler (v0.x, v1.x) yok sayilir.
+      - name: Surumu hesapla
+        id: ver
+        run: |
+          last=$(git tag -l 'v*' --sort=-v:refname | grep -E '^v([2-9]|[1-9][0-9]+)\.[0-9]+\.[0-9]+$' | head -1 || true)
+          if [ -z "$last" ]; then
+            next="2.0.0"
+          else
+            IFS=. read -r MA MI PA <<< "${last#v}"
+            msg=$(git log -1 --pretty=%B)
+            if   echo "$msg" | grep -qiF '[major]'; then MA=$((MA+1)); MI=0; PA=0
+            elif echo "$msg" | grep -qiF '[minor]'; then MI=$((MI+1)); PA=0
+            else PA=$((PA+1)); fi
+            next="$MA.$MI.$PA"
+          fi
+          echo "Onceki: ${last:-yok}  ->  Yeni: v$next"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Birim testleri
+        run: ./gradlew --no-daemon :app:testDebugUnitTest
+
+      # Opsiyonel: GitHub Secrets tanimliysa surum kalici anahtarla imzalanir
+      # (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD).
+      # Tanimli degilse debug anahtariyla imzalanir ve derleme yine calisir.
+      - name: Surum imzasini hazirla (secret varsa)
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "Imza secret'lari yok: debug anahtariyla imzalanacak."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > key.properties
+
+      - name: APK derle (surum ${{ steps.ver.outputs.version }})
+        run: |
+          ./gradlew --no-daemon :app:assembleRelease \
+            -PversionName=${{ steps.ver.outputs.version }} \
+            -PversionCode=${{ github.run_number }}
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk \
+             dist/TerminalF-v${{ steps.ver.outputs.version }}.apk
+
+      - name: APK'yi yukle
+        uses: actions/upload-artifact@v6
+        with:
+          name: app-release-apk
+          path: dist/TerminalF-v${{ steps.ver.outputs.version }}.apk
+
+      - name: GitHub Release olustur (main'e her push)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: TerminalF v${{ steps.ver.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          files: dist/TerminalF-v${{ steps.ver.outputs.version }}.apk
+          generate_release_notes: true
