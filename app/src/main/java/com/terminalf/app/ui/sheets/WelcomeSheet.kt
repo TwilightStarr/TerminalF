@@ -50,7 +50,7 @@ import kotlinx.coroutines.launch
  * istenir (bağlamsız izin penceresi yerine).
  */
 suspend fun SheetHost.showWelcomeSheet(notifier: Notifier) {
-    show<Unit> { close -> WelcomeBody(notifier = notifier, onDone = { close(null) }) }
+    show<Unit>(key = "welcome") { close -> WelcomeBody(notifier = notifier, onDone = { close(null) }) }
 }
 
 @Composable

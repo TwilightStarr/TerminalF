@@ -1,11 +1,14 @@
 package com.terminalf.app.state
 
+import com.terminalf.app.core.AngleSelection
 import com.terminalf.app.core.CpuPolicy
 import com.terminalf.app.core.Diagnosis
+import com.terminalf.app.core.GameKind
 import com.terminalf.app.core.GameModeConfig
 import com.terminalf.app.core.GamePreset
 import com.terminalf.app.core.GameSession
 import com.terminalf.app.core.GameStep
+import com.terminalf.app.core.GraphicsBackend
 import com.terminalf.app.core.Json
 import com.terminalf.app.core.PixelSize
 import com.terminalf.app.core.ResolutionMethod
@@ -19,8 +22,11 @@ import com.terminalf.app.core.buildWatchdogKill
 import com.terminalf.app.core.buildWatchdogLaunch
 import com.terminalf.app.core.buildWatchdogScript
 import com.terminalf.app.core.buildWatchdogStatus
+import com.terminalf.app.core.customLines
+import com.terminalf.app.core.detectGameKind
 import com.terminalf.app.core.diagnose
 import com.terminalf.app.core.isSafePackage
+import com.terminalf.app.core.kAngleKeys
 import com.terminalf.app.core.kAnimationKeys
 import com.terminalf.app.core.kBrightnessKeys
 import com.terminalf.app.core.kCpuPolicyReadCommand
@@ -32,18 +38,21 @@ import com.terminalf.app.core.kWatchdogReadLog
 import com.terminalf.app.core.kZenKey
 import com.terminalf.app.core.normalizeSettingValue
 import com.terminalf.app.core.parseActiveRefreshRate
+import com.terminalf.app.core.parseListSetting
 import com.terminalf.app.core.parseCpuPolicies
 import com.terminalf.app.core.parseFocusedPackage
 import com.terminalf.app.core.parseWatchLog
 import com.terminalf.app.core.parseWatchdogStatus
 import com.terminalf.app.core.parseWmDensity
 import com.terminalf.app.core.parseWmSize
+import com.terminalf.app.core.recommendedConfig
 import com.terminalf.app.core.str
 import com.terminalf.app.core.suggestSettings
 import com.terminalf.app.core.topPolicies
 import com.terminalf.app.core.SettingKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Tek bir adımın sonucu. */
 data class GameStepResult(
@@ -82,6 +91,10 @@ private data class Snapshot(
     val physicalDensity: Int?,
     val brightness: Int?,
     val cpuPolicies: List<CpuPolicy>,
+    /** Mevcut ANGLE seçimi; `null` = grafik motoru istenmedi ya da ayar güvenle okunamadı. */
+    val angle: AngleSelection? = null,
+    /** `getprop ro.gfx.angle.supported` sonucu (`null` = denetlenmedi). */
+    val angleSupported: Boolean? = null,
 )
 
 /**
@@ -104,6 +117,9 @@ class GameModeController(
         private const val SESSION_KEY = "game_session"
         private const val PROFILES_KEY = "game_profiles"
         private const val LAST_RUN_KEY = "game_last_run"
+
+        /** Ayarları uygulamak için tanınan en uzun süre; dolunca oyun yine de açılır. */
+        private const val APPLY_BUDGET_MS = 30_000L
     }
 
     /** Paket adı -> o oyunun ayarı. Sıra, ekleme sırasıdır. */
@@ -169,6 +185,12 @@ class GameModeController(
     /** Son oturum ölçümüne göre bir sonraki oturum için ayar önerisi. */
     val suggestion: ScaleSuggestion?
         get() = if (lastPackage == config.packageName) suggestSettings(stats, config) else null
+
+    /** Seçili oyunun türü (yalnızca ipucu ve önerilen ayar için). */
+    val kind: GameKind get() = detectGameKind(config.packageName)
+
+    /** Seçili oyunun türüne göre önerilen ayar (yoksa `null`). */
+    val recommended: GameModeConfig? get() = recommendedConfig(kind, config)
 
     /** Oyun modu şu an açık mı (geri alınacak bir şey var mı)? */
     val active: Boolean get() = sessionState != null
@@ -314,6 +336,34 @@ class GameModeController(
         persistProfiles()
     }
 
+    /** Türe özel önerilen ayarı seçili oyuna uygular. */
+    fun applyRecommended() {
+        val rec = recommended ?: return
+        updateConfig(rec)
+    }
+
+    /**
+     * Oyunu önceden derler (`speed-profile`): Java/Kotlin tarafı ağır oyunlarda ilk açılış ve
+     * takılmaları azaltabilir; yerel (C++) motorlarda etkisi sınırlıdır. Geri alınacak bir
+     * değişiklik yapmaz.
+     */
+    suspend fun compileSelected(): GameStepResult {
+        val label = "Oyunu önceden derle"
+        if (!control.ready) return GameStepResult(label, false, true, "Önce tam kontrolü etkinleştirin.")
+        val pkg = config.packageName
+        if (!isSafePackage(pkg)) return GameStepResult(label, false, true, "Geçersiz paket adı.")
+        if (busy) return GameStepResult(label, false, true, "Başka bir işlem sürüyor.")
+        busy = true
+        notifyChanged()
+        try {
+            val o = control.shell(label, "cmd package compile -m speed-profile -f $pkg")
+            return GameStepResult(label, o.ok, true, o.message)
+        } finally {
+            busy = false
+            notifyChanged()
+        }
+    }
+
     /** Önerilen çözünürlüğü (ve varsa kare hızını) seçili oyuna uygular. */
     fun applySuggestion() {
         val sug = suggestion ?: return
@@ -339,6 +389,12 @@ class GameModeController(
         val out = read("pm path ${config.packageName}")
         installed = out.contains("package:")
         notifyChanged()
+    }
+
+    /** Seçili oyunun işlemi şu an çalışıyor mu? (`pidof`; okunamazsa `false`) */
+    suspend fun isRunning(): Boolean {
+        if (!control.ready || !isSafePackage(config.packageName)) return false
+        return read("pidof ${config.packageName}").trim().isNotEmpty()
     }
 
     /** Etkin ekran yenileme hızını okur (okunamazsa `null`). */
@@ -414,64 +470,22 @@ class GameModeController(
         busy = true
         notifyChanged()
         try {
-            // Eski izleyici ve eski işaret, yeni oturumu yanlışlıkla kapatmasın.
-            read(buildWatchdogKill())
-            read(kWatchdogClearMark)
-            syncNote = null
-
-            if (sessionState != null) {
-                val undo = revertInternal()
-                if (!undo.ok) {
-                    return GameRunResult(undo.steps, note = "Önceki oyun modu geri alınamadı; yeniden deneyin.")
-                }
-            }
-
-            // 1) Eski değerleri oku ve DİSKE yaz (değişiklikten önce).
-            val snap = snapshot(cfg)
-            sessionState = snap.session
-            persistSession(sessionState)
-            lastPackage = cfg.packageName
-            lastTargetFps = cfg.targetFps
-            try {
-                store.writeString(LAST_RUN_KEY, "${cfg.packageName}:${cfg.targetFps}")
-            } catch (_: Exception) {
-            }
-
-            // 2) Uygula.
-            val steps = buildApplySteps(
-                cfg,
-                physicalSize = snap.physicalSize,
-                physicalDensity = snap.physicalDensity,
-                brightness = snap.brightness,
-                cpuPolicies = snap.cpuPolicies,
-            )
-            val results = runSteps(steps)
-            val extra = ArrayList<GameStepResult>()
-            if (cfg.method == ResolutionMethod.WholeScreen && cfg.reducesResolution && snap.physicalSize == null) {
-                extra.add(GameStepResult("Ekran çözünürlüğü", false, false, "Ekran boyutu okunamadı, atlandı."))
-            }
-            if (cfg.cpuCap && control.path != AccessPath.Root) {
-                extra.add(
-                    GameStepResult(
-                        "İşlemci hızını sınırla", false, true, "Bu adım root gerektirir; Shizuku ile yapılamaz.",
-                    ),
+            // Ayarların uygulanması en çok APPLY_BUDGET_MS sürer; yetki yolu yanıt vermese bile oyun
+            // her durumda açılır (kullanıcı sonsuza dek beklemez).
+            var timedOut = false
+            var result = withTimeoutOrNull(APPLY_BUDGET_MS) { applyPhase(cfg, launch) }
+            if (result == null) {
+                timedOut = true
+                result = GameRunResult(
+                    emptyList(),
+                    note = "Ayarlar zamanında uygulanamadı (yetki yolu yanıt vermiyor). Geri Al ile kontrol edin.",
                 )
-            } else if (cfg.cpuCap && snap.cpuPolicies.isEmpty()) {
-                extra.add(GameStepResult("İşlemci hızını sınırla", false, true, "İşlemci frekans bilgisi okunamadı."))
             }
-            if (cfg.dimScreen && snap.brightness == null) {
-                extra.add(GameStepResult("Ekran parlaklığını kıs", false, true, "Mevcut parlaklık okunamadı."))
-            }
-            if (cfg.autoRevert) {
-                results.add(startWatchdog(snap.session, cfg))
-            }
-            val result = GameRunResult(results + extra)
             lastResult = result
 
-            refreshDisplayHz()
-
-            // 3) Oyunu aç (çözünürlük değiştiyse ekranın oturmasını bekle).
-            if (launch) {
+            // Önceki oturum geri alınamadıysa yeni oturum başlatılmaz; oyun da açılmaz.
+            val blocked = !timedOut && result.note != null
+            if (launch && !blocked) {
                 delayFn(900)
                 launcher(cfg.packageName)
             }
@@ -480,6 +494,86 @@ class GameModeController(
             busy = false
             notifyChanged()
         }
+    }
+
+    /** Eski değerleri kaydeder, ayarları uygular, izleyiciyi başlatır. */
+    private suspend fun applyPhase(cfg: GameModeConfig, launch: Boolean): GameRunResult {
+        // Eski izleyici ve eski işaret, yeni oturumu yanlışlıkla kapatmasın.
+        read(buildWatchdogKill())
+        read(kWatchdogClearMark)
+        syncNote = null
+
+        if (sessionState != null) {
+            val undo = revertInternal()
+            if (!undo.ok) {
+                return GameRunResult(undo.steps, note = "Önceki oyun modu geri alınamadı; yeniden deneyin.")
+            }
+        }
+
+        // 1) Eski değerleri oku ve DİSKE yaz (değişiklikten önce).
+        val snap = snapshot(cfg)
+        sessionState = snap.session
+        persistSession(sessionState)
+        lastPackage = cfg.packageName
+        lastTargetFps = cfg.targetFps
+        try {
+            store.writeString(LAST_RUN_KEY, "${cfg.packageName}:${cfg.targetFps}")
+        } catch (_: Exception) {
+        }
+
+        // 2) Uygula.
+        val steps = buildApplySteps(
+            cfg,
+            physicalSize = snap.physicalSize,
+            physicalDensity = snap.physicalDensity,
+            brightness = snap.brightness,
+            cpuPolicies = snap.cpuPolicies,
+            angle = snap.angle,
+            restartGame = launch,
+        )
+        val results = runSteps(steps)
+        val extra = ArrayList<GameStepResult>()
+        if (cfg.method == ResolutionMethod.WholeScreen && cfg.reducesResolution && snap.physicalSize == null) {
+            extra.add(GameStepResult("Ekran çözünürlüğü", false, false, "Ekran boyutu okunamadı, atlandı."))
+        }
+        if (cfg.cpuCap && control.path != AccessPath.Root) {
+            extra.add(
+                GameStepResult(
+                    "İşlemci hızını sınırla", false, true, "Bu adım root gerektirir; Shizuku ile yapılamaz.",
+                ),
+            )
+        } else if (cfg.cpuCap && snap.cpuPolicies.isEmpty()) {
+            extra.add(GameStepResult("İşlemci hızını sınırla", false, true, "İşlemci frekans bilgisi okunamadı."))
+        }
+        if (cfg.backend != GraphicsBackend.Default && snap.angle == null) {
+            extra.add(
+                GameStepResult(
+                    "Grafik motoru: ${cfg.backend.label}", false, true,
+                    "Mevcut sürücü ayarı güvenle okunamadı; başka uygulamaların ayarı bozulmasın diye dokunulmadı.",
+                ),
+            )
+        } else if (cfg.backend == GraphicsBackend.Angle && snap.angleSupported == false) {
+            extra.add(
+                GameStepResult(
+                    "ANGLE desteği", false, true,
+                    "Cihaz ANGLE desteği bildirmiyor; ayar yazıldı ama etkisiz kalabilir.",
+                ),
+            )
+        }
+        if (cfg.dimScreen && snap.brightness == null) {
+            extra.add(GameStepResult("Ekran parlaklığını kıs", false, true, "Mevcut parlaklık okunamadı."))
+        }
+        val custom = customLines(cfg.customStart)
+        if (custom.isNotEmpty()) {
+            results.addAll(runSteps(custom.map { GameStep("Özel komut: ${it.take(40)}", it, optional = true) }))
+        }
+        if (cfg.autoRevert) {
+            results.add(startWatchdog(snap.session, cfg))
+        }
+        val result = GameRunResult(results + extra)
+        lastResult = result
+        refreshDisplayHz()
+        return result
     }
 
     /**
@@ -529,6 +623,10 @@ class GameModeController(
         read(buildWatchdogKill())
         watchdogAlive = false
         val results = runSteps(buildRevertSteps(session))
+        val endCommands = profiles[session.packageName]?.let { customLines(it.customEnd) } ?: emptyList()
+        if (endCommands.isNotEmpty()) {
+            results.addAll(runSteps(endCommands.map { GameStep("Özel komut: ${it.take(40)}", it, optional = true) }))
+        }
         val result = GameRunResult(results)
         // Yalnızca zorunlu adımlar başarılıysa oturumu kapat; aksi halde "Geri Al" tekrar
         // denenebilsin diye anlık görüntü saklanır.
@@ -550,6 +648,21 @@ class GameModeController(
         if (cfg.dimScreen) keys.addAll(kBrightnessKeys)
         for (key in keys) {
             settings[key.id] = normalizeSettingValue(read(key.readCommand))
+        }
+
+        var angle: AngleSelection? = null
+        var angleSupported: Boolean? = null
+        if (cfg.backend != GraphicsBackend.Default && isSafePackage(cfg.packageName)) {
+            val pk = parseListSetting(read(kAngleKeys[0].readCommand))
+            val vs = parseListSetting(read(kAngleKeys[1].readCommand))
+            if (pk.safe && vs.safe) {
+                angle = AngleSelection(pk.value, vs.value)
+                settings[kAngleKeys[0].id] = pk.value
+                settings[kAngleKeys[1].id] = vs.value
+            }
+            if (cfg.backend == GraphicsBackend.Angle) {
+                angleSupported = read("getprop ro.gfx.angle.supported").trim() == "true"
+            }
         }
 
         var brightness: Int? = null
@@ -589,11 +702,14 @@ class GameModeController(
                 changedScreen = changedScreen,
                 cpuMax = cpuMax,
                 startedAtMs = clock(),
+                fixedPerf = cfg.fixedPerf,
             ),
             physicalSize = physical,
             physicalDensity = density,
             brightness = brightness,
             cpuPolicies = cpuPolicies,
+            angle = angle,
+            angleSupported = angleSupported,
         )
     }
 }

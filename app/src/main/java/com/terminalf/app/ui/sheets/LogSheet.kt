@@ -29,7 +29,7 @@ import com.terminalf.app.ui.theme.faded
 
 /** İşlem günlüğü: arayüzü kalabalıklaştırmadan, gerektiğinde açılan alt sayfa. */
 suspend fun SheetHost.showLogSheet(control: ControlController) {
-    show<Unit> { _ -> LogSheetBody(control) }
+    show<Unit>(key = "log") { _ -> LogSheetBody(control) }
 }
 
 /** Sonuç için kısa bildirim (başarı/hata ayrımı yok, metin zaten açık). */

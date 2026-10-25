@@ -1,5 +1,8 @@
 package com.terminalf.app.ui.pages
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +29,7 @@ import androidx.compose.material.icons.rounded.AcUnit
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.Error
@@ -48,12 +52,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,13 +73,26 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.terminalf.app.core.DiagnosisKind
 import com.terminalf.app.core.GameModeConfig
 import com.terminalf.app.core.GamePower
+import com.terminalf.app.core.GameKind
 import com.terminalf.app.core.GamePreset
+import com.terminalf.app.core.GraphicsBackend
 import com.terminalf.app.core.ResolutionMethod
+import com.terminalf.app.core.autoLockHz
+import com.terminalf.app.core.kBedrockFpsCap
+import com.terminalf.app.core.kBedrockPackage
+import com.terminalf.app.core.customLines
 import com.terminalf.app.core.fixed
 import com.terminalf.app.core.formatSeconds
+import com.terminalf.app.core.gameTips
+import com.terminalf.app.core.modWarning
 import com.terminalf.app.core.kGamePresets
+import com.terminalf.app.core.kCustomMaxLines
+import com.terminalf.app.core.kCpuCapChoices
+import com.terminalf.app.core.kDimChoices
+import com.terminalf.app.core.kFpsChoices
 import com.terminalf.app.core.kGuardTempChoices
-import com.terminalf.app.core.kScaleSteps
+import com.terminalf.app.core.kHzChoices
+import com.terminalf.app.core.kScaleChoices
 import com.terminalf.app.core.thermalLabel
 import com.terminalf.app.state.ControlController
 import com.terminalf.app.state.GameModeController
@@ -109,6 +131,7 @@ fun GamePage(control: ControlController, game: GameModeController) {
 
     val ready = control.ready
     val probed = remember { booleanArrayOf(false) }
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
 
     // Açılışta: kayıtlı oyunları oku, sonra seçili oyunun kurulu olup olmadığına bak.
     LaunchedEffect(Unit) {
@@ -166,6 +189,16 @@ fun GamePage(control: ControlController, game: GameModeController) {
                 )
                 if (!ok) return@launch
             }
+            if (launchGame && cfg.backend != GraphicsBackend.Default && game.isRunning()) {
+                val ok = dialogs.confirm(
+                    title = "Oyun yeniden başlatılacak",
+                    message = "Grafik motoru değişikliği oyun açılırken geçerli olur. Oyun şu an açık; " +
+                        "kapatılıp yeniden açılacak ve kaydedilmemiş ilerleme kaybolabilir. Önce oyunda " +
+                        "kaydedin.",
+                    confirmLabel = "Devam",
+                )
+                if (!ok) return@launch
+            }
             val result = game.startSelected(launch = launchGame)
             control.reportDone("Oyun Modu", result.summary, ok = result.ok)
             toast.show(result.summary)
@@ -183,7 +216,7 @@ fun GamePage(control: ControlController, game: GameModeController) {
     fun pickGame() {
         scope.launch {
             val existing = game.games.map { it.packageName }.toSet()
-            val picked = sheets.show<SavedGame> { close ->
+            val picked = sheets.show<SavedGame>(key = "game_picker") { close ->
                 GamePickerSheet(existing = existing, close = close)
             }
             if (picked == null) return@launch
@@ -236,7 +269,8 @@ fun GamePage(control: ControlController, game: GameModeController) {
         if (!has) {
             GameEmptyHero(onAdd = { pickGame() })
         } else {
-            GameStrip(game = game, busy = busy, onAdd = { pickGame() })
+            // Oyun/mod seçimi hiçbir zaman kilitlenmez: uzun süren bir işlem seçimleri engellemez.
+            GameStrip(game = game, busy = false, onAdd = { pickGame() })
             Spacer(Modifier.height(12.dp))
             GameHeroCard(
                 control = control,
@@ -257,38 +291,53 @@ fun GamePage(control: ControlController, game: GameModeController) {
                 )
             }
             SectionHeader("Mod seç")
-            GamePresetList(game = game, busy = busy)
-            if (suggestion != null) {
-                Spacer(Modifier.height(12.dp))
-                GameSuggestionCard(game = game, busy = busy)
+            GamePresetList(game = game, busy = false)
+            Spacer(Modifier.height(6.dp))
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                TextButton(onClick = { showAdvanced = !showAdvanced }) {
+                    Icon(
+                        Icons.Rounded.Tune,
+                        contentDescription = null,
+                        tint = c.muted,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (showAdvanced) "Gelişmiş ayarları gizle" else "Gelişmiş ayarlar", color = c.muted)
+                }
             }
-            SectionHeader("Ayrıntılı ayarlar")
-            GameGroups(game = game, cfg = cfg, busy = busy)
-            if (lastResult != null && lastResult.steps.isNotEmpty()) {
-                SectionHeader("Son işlem")
-                GameResultCard(result = lastResult)
+            if (showAdvanced) {
+                if (suggestion != null) {
+                    Spacer(Modifier.height(8.dp))
+                    GameSuggestionCard(game = game, busy = false)
+                }
+                SectionHeader("Ayrıntılı ayarlar")
+                GameGroups(game = game, cfg = cfg, busy = false)
+                if (lastResult != null && lastResult.steps.isNotEmpty()) {
+                    SectionHeader("Son işlem")
+                    GameResultCard(result = lastResult)
+                }
+                if (control.ready) {
+                    SectionHeader(
+                        "Son oyun oturumu",
+                        trailing = {
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        game.syncWatchdog()
+                                        game.refreshStats()
+                                    }
+                                },
+                            ) {
+                                Icon(Icons.Rounded.Refresh, contentDescription = "Yenile", tint = c.muted)
+                            }
+                        },
+                    )
+                    GameReportCard(game = game)
+                }
+                SectionHeader("Bilmeniz gerekenler")
+                GameHonestyCard()
             }
-            if (control.ready) {
-                SectionHeader(
-                    "Son oyun oturumu",
-                    trailing = {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    game.syncWatchdog()
-                                    game.refreshStats()
-                                }
-                            },
-                        ) {
-                            Icon(Icons.Rounded.Refresh, contentDescription = "Yenile", tint = c.muted)
-                        }
-                    },
-                )
-                GameReportCard(game = game)
-            }
-            SectionHeader("Bilmeniz gerekenler")
-            GameHonestyCard()
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 TextButton(onClick = { removeSelected() }, enabled = !busy) {
                     Icon(
@@ -303,6 +352,19 @@ fun GamePage(control: ControlController, game: GameModeController) {
             }
         }
     }
+}
+
+/** Mod kartında gösterilen tek satırlık özet. */
+private fun presetLine(p: GamePreset): String {
+    val tagline = when (p.id) {
+        "ice" -> "En serin ve en uzun pil"
+        "cool" -> "Isınmayı azaltır"
+        "balanced" -> "Akıcılık ve ısı dengesi"
+        "smooth" -> "En akıcı, daha çok ısınır"
+        else -> ""
+    }
+    val scale = if (p.scale >= 0.999) "tam çözünürlük" else "%${(p.scale * 100).roundToInt()} çözünürlük"
+    return "$tagline · ${p.targetFps} FPS · $scale"
 }
 
 private fun scaleLabel(v: Double): String =
@@ -326,14 +388,14 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
 
     val screenOn = ArrayList<String>()
     cfg.lockHz?.let { screenOn.add("Ekran $it Hz") }
-    if (cfg.dimScreen) screenOn.add("parlaklık kısık")
+    if (cfg.dimScreen) screenOn.add("parlaklık %${cfg.dimPercent}")
     if (cfg.animationsOff) screenOn.add("animasyon kapalı")
 
     val systemOn = ArrayList<String>()
     if (cfg.killBackground) systemOn.add("arka plan temiz")
     if (cfg.dnd) systemOn.add("bildirim sessiz")
     if (cfg.batterySaver) systemOn.add("pil tasarrufu")
-    if (cfg.cpuCap) systemOn.add("işlemci sınırı")
+    if (cfg.cpuCap) systemOn.add("işlemci sınırı %${cfg.cpuCapPercent}")
 
     val safetyOn = ArrayList<String>()
     safetyOn.add(if (cfg.autoRevert) "otomatik geri alma" else "geri alma elle")
@@ -341,6 +403,8 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
         safetyOn.add(if (cfg.guardTempC == 0) "ısı koruması kapalı" else "koruma ${cfg.guardTempC} °C")
     }
 
+    EngineGroup(game = game, cfg = cfg, busy = busy)
+    Spacer(Modifier.height(10.dp))
     GameGroup(
         icon = Icons.Rounded.Speed,
         title = "Performans",
@@ -349,16 +413,23 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
         GameLabel("Kare hızı üst sınırı")
         Spacer(Modifier.height(8.dp))
         GameChoices(
-            values = listOf(30, 60, 90),
+            values = kFpsChoices,
             selected = cfg.targetFps,
             label = { v: Int -> "$v FPS" },
             onSelected = enabledIf(!busy) { v: Int -> set(cfg.copy(targetFps = v)) },
         )
+        if (game.kind == GameKind.MinecraftBedrock && cfg.targetFps > kBedrockFpsCap) {
+            Spacer(Modifier.height(6.dp))
+            GameHint(
+                "Minecraft Bedrock Android'de oyunun kendisi 60 FPS'e sınırlı. ${cfg.targetFps} FPS " +
+                    "seçmek FPS'i artırmaz, yalnızca telefonu ısıtır; 60 öneririz.",
+            )
+        }
         Spacer(Modifier.height(16.dp))
         GameLabel("Oyun çözünürlüğü")
         Spacer(Modifier.height(8.dp))
         GameChoices(
-            values = kScaleSteps,
+            values = kScaleChoices,
             selected = cfg.scale,
             label = { v: Double -> if (v >= 1) "Tam" else "%${(v * 100).roundToInt()}" },
             onSelected = enabledIf(!busy) { v: Double -> set(cfg.copy(scale = v)) },
@@ -410,12 +481,29 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
         summary = if (screenOn.isEmpty()) "Ekrana dokunulmaz" else screenOn.joinToString(" · "),
     ) {
         GameSwitchRow(
-            title = "Ekranı ${if (cfg.targetFps >= 60) cfg.targetFps else 60} Hz'e kilitle",
+            title = "Ekranı ${if (cfg.refreshHz > 0) cfg.refreshHz else autoLockHz(cfg.targetFps)} Hz'e kilitle",
             subtitle = "Değişken yenileme hızının oyun sırasında yükselmesini engeller; " +
                 "ekran ve GPU daha az çalışır. Oyun bitince geri alınır.",
             value = cfg.lockRefreshRate,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(lockRefreshRate = v)) },
         )
+        if (cfg.lockRefreshRate) {
+            Spacer(Modifier.height(4.dp))
+            GameLabel("Kilitlenecek yenileme hızı")
+            Spacer(Modifier.height(8.dp))
+            GameChoices(
+                values = kHzChoices,
+                selected = cfg.refreshHz,
+                label = { v: Int -> if (v == 0) "Otomatik" else "$v Hz" },
+                onSelected = enabledIf(!busy) { v: Int -> set(cfg.copy(refreshHz = v)) },
+            )
+            Spacer(Modifier.height(6.dp))
+            GameHint(
+                "Otomatik: kare hızının tam katı olan en düşük panel hızı seçilir (30 FPS için 60 Hz). " +
+                    "Panelinizin desteklemediği bir değeri üretici yazılımı yok sayabilir.",
+            )
+            Spacer(Modifier.height(8.dp))
+        }
         RowDivider()
         GameSwitchRow(
             title = "Ekran parlaklığını kıs",
@@ -424,6 +512,18 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
             value = cfg.dimScreen,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(dimScreen = v)) },
         )
+        if (cfg.dimScreen) {
+            Spacer(Modifier.height(4.dp))
+            GameLabel("Parlaklık oranı (mevcut değerin yüzdesi)")
+            Spacer(Modifier.height(8.dp))
+            GameChoices(
+                values = kDimChoices,
+                selected = cfg.dimPercent,
+                label = { v: Int -> "%$v" },
+                onSelected = enabledIf(!busy) { v: Int -> set(cfg.copy(dimPercent = v)) },
+            )
+            Spacer(Modifier.height(8.dp))
+        }
         RowDivider()
         GameSwitchRow(
             title = "Sistem animasyonlarını kapat",
@@ -463,11 +563,23 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
         RowDivider()
         GameSwitchRow(
             title = "İşlemci hızını sınırla (root)",
-            subtitle = "En güçlü iki çekirdek kümesi %70 hızla çalışır; ısı ve hız dalgalanması azalır. " +
+            subtitle = "En güçlü iki çekirdek kümesi seçtiğiniz oranda çalışır; ısı ve hız dalgalanması azalır. " +
                 "Yalnızca root ile çalışır, Shizuku ile uygulanamaz.",
             value = cfg.cpuCap,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(cpuCap = v)) },
         )
+        if (cfg.cpuCap) {
+            Spacer(Modifier.height(4.dp))
+            GameLabel("İşlemci hız sınırı (azami hızın yüzdesi)")
+            Spacer(Modifier.height(8.dp))
+            GameChoices(
+                values = kCpuCapChoices,
+                selected = cfg.cpuCapPercent,
+                label = { v: Int -> "%$v" },
+                onSelected = enabledIf(!busy) { v: Int -> set(cfg.copy(cpuCapPercent = v)) },
+            )
+            Spacer(Modifier.height(8.dp))
+        }
     }
     Spacer(Modifier.height(10.dp))
     GameGroup(
@@ -503,6 +615,173 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
                 "Isı koruması izleyiciye bağlıdır; açmak için otomatik geri almayı açın."
             },
         )
+    }
+    Spacer(Modifier.height(10.dp))
+    val customCount = customLines(cfg.customStart).size + customLines(cfg.customEnd).size
+    GameGroup(
+        icon = Icons.Rounded.Code,
+        title = "Özel komutlar",
+        summary = if (customCount == 0) "Kendi komutlarını ekle" else "$customCount özel komut",
+    ) {
+        GameLabel("Başlarken çalışsın")
+        Spacer(Modifier.height(8.dp))
+        GameCommandField(
+            initial = cfg.customStart,
+            resetKey = cfg.packageName + ":start",
+            placeholder = "Her satıra bir komut\nörn: settings put global some_key 1",
+            onChange = { v: String -> set(game.config.copy(customStart = v)) },
+        )
+        Spacer(Modifier.height(16.dp))
+        GameLabel("Geri Al'a basınca çalışsın")
+        Spacer(Modifier.height(8.dp))
+        GameCommandField(
+            initial = cfg.customEnd,
+            resetKey = cfg.packageName + ":end",
+            placeholder = "Her satıra bir komut",
+            onChange = { v: String -> set(game.config.copy(customEnd = v)) },
+        )
+        Spacer(Modifier.height(6.dp))
+        GameHint(
+            "Komutlar sistem yetkisiyle (Shizuku/root) sırayla çalışır; boş satırlar ve # ile başlayan " +
+                "satırlar atlanır (en çok $kCustomMaxLines satır). Bitiş komutları yalnızca Geri Al ile " +
+                "çalışır; oyun kapanınca cihazdaki otomatik geri almada çalışmaz. Komutları kendi " +
+                "sorumluluğunda ekle.",
+        )
+    }
+}
+
+/** Play Store'da uygulama sayfasını açar (Play yoksa tarayıcıda). Başarısızsa sessizce vazgeçer. */
+private fun openPlayStore(context: android.content.Context, pkg: String) {
+    val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(market)
+    } catch (_: ActivityNotFoundException) {
+        try {
+            val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$pkg"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(web)
+        } catch (_: ActivityNotFoundException) {
+        }
+    }
+}
+
+/** Grafik motoru: sürücü arka ucu, sabit performans, önceden derleme ve türe özel ipuçları. */
+@Composable
+private fun EngineGroup(game: GameModeController, cfg: GameModeConfig, busy: Boolean) {
+    val c = AppTheme.colors
+    val scope = rememberCoroutineScope()
+    val toast = LocalToaster.current
+    val kind = game.kind
+    val tips = gameTips(kind)
+    val rec = game.recommended
+
+    val summary = ArrayList<String>()
+    summary.add(cfg.backend.label)
+    if (cfg.fixedPerf) summary.add("sabit performans")
+
+    GameGroup(
+        icon = Icons.Rounded.Bolt,
+        title = "Grafik motoru",
+        summary = summary.joinToString(" · "),
+    ) {
+        val warning = modWarning(kind)
+        if (warning != null) {
+            Text(
+                warning,
+                color = c.warn,
+                fontSize = 12.5.sp,
+                lineHeight = (12.5f * 1.4f).sp,
+            )
+            Spacer(Modifier.height(14.dp))
+        }
+        GameLabel("Grafik sürücüsü arka ucu")
+        Spacer(Modifier.height(8.dp))
+        GameChoices(
+            values = GraphicsBackend.values().toList(),
+            selected = cfg.backend,
+            label = { v: GraphicsBackend -> v.label },
+            onSelected = enabledIf(!busy) { v: GraphicsBackend -> game.updateConfig(cfg.copy(backend = v)) },
+        )
+        Spacer(Modifier.height(6.dp))
+        GameHint(cfg.backend.hint)
+        if (cfg.backend != GraphicsBackend.Default) {
+            Spacer(Modifier.height(6.dp))
+            GameHint(
+                "Sürücü oyun açılırken seçilir: Başlat'a basınca oyun açıksa kapatılıp yeniden açılır. " +
+                    "Oyun bitince seçim eski haline döner.",
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        RowDivider()
+        GameSwitchRow(
+            title = "Sabit performans modu (deneysel)",
+            subtitle = "İşlemci/GPU hızını oyun boyunca sabit tutar; kare süreleri daha düzgün olabilir " +
+                "ama telefon daha çok ısınır. Android 12+ gerekir, her cihazda çalışmaz. Isı koruması " +
+                "devreye girerse otomatik kapanır.",
+            value = cfg.fixedPerf,
+            onChanged = enabledIf(!busy) { v: Boolean -> game.updateConfig(cfg.copy(fixedPerf = v)) },
+        )
+        RowDivider()
+        Spacer(Modifier.height(12.dp))
+        GameLabel("Oyunu önceden derle")
+        Spacer(Modifier.height(4.dp))
+        GameHint(
+            "Java/Kotlin tarafı ağır oyunlarda ilk açılışı ve takılmaları azaltabilir; tamamen yerel " +
+                "(C++) motorlarda etkisi sınırlıdır. Tek seferliktir, geri alınacak bir şey yapmaz.",
+        )
+        Spacer(Modifier.height(10.dp))
+        SoftButton(
+            label = "Şimdi derle",
+            onClick = if (busy || !game.control.ready) {
+                null
+            } else {
+                ({
+                    scope.launch {
+                        val r = game.compileSelected()
+                        toast.show(if (r.ok) "Oyun derlendi" else "Derlenemedi: ${r.detail}")
+                    }
+                })
+            },
+            icon = Icons.Rounded.Memory,
+        )
+        if (tips.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            GameLabel("${kind.title} için ipuçları")
+            for (t in tips) {
+                Spacer(Modifier.height(6.dp))
+                GameHint("• $t")
+            }
+        }
+        if (kind == GameKind.MinecraftBedrock) {
+            val context = LocalContext.current
+            Spacer(Modifier.height(16.dp))
+            GameLabel("Minecraft'ı güncelle")
+            Spacer(Modifier.height(4.dp))
+            GameHint(
+                "Google Play'deki Minecraft sayfasını açar; güncellemeyi orada yaparsınız. Başka " +
+                    "kaynaktan APK kurmayın.",
+            )
+            Spacer(Modifier.height(10.dp))
+            SoftButton(
+                label = "Google Play'de aç",
+                onClick = { openPlayStore(context, kBedrockPackage) },
+                icon = Icons.Rounded.Refresh,
+            )
+        }
+        if (rec != null) {
+            Spacer(Modifier.height(14.dp))
+            SoftButton(
+                label = "Önerilen ayarı uygula",
+                onClick = if (busy) null else ({ game.applyRecommended() }),
+                icon = Icons.Rounded.AutoFixHigh,
+            )
+            Spacer(Modifier.height(6.dp))
+            GameHint(
+                "Bu bir deneme noktasıdır, garanti değildir. Bir oyun oturumu oynayıp \"Son oyun " +
+                    "oturumu\" ortalama FPS'ini varsayılanla karşılaştırın.",
+            )
+        }
     }
 }
 
@@ -643,6 +922,9 @@ private fun GameHeroCard(
                 )
             }
             if (hz != null) StatusPill(label = "Ekran ${hz.roundToInt()} Hz", color = c.muted)
+            if (game.config.backend != GraphicsBackend.Default) {
+                StatusPill(label = "Motor: ${game.config.backend.label}", color = c.primary)
+            }
             if (here && alive != null) {
                 StatusPill(
                     label = if (alive) "Otomatik geri alma: izliyor" else "Otomatik geri alma: kapalı",
@@ -731,7 +1013,7 @@ private fun GamePresetList(game: GameModeController, busy: Boolean) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(p.title, color = c.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.5.sp)
                             Spacer(Modifier.height(3.dp))
-                            GameHint(p.subtitle)
+                            GameHint(presetLine(p))
                         }
                         if (isMatch) {
                             Icon(
@@ -749,7 +1031,7 @@ private fun GamePresetList(game: GameModeController, busy: Boolean) {
         }
         if (matched == null) {
             GameHint(
-                "Özel ayar: aşağıdaki ayrıntılı ayarlarda değişiklik yaptınız.",
+                "Özel ayar: gelişmiş ayarlarda değişiklik yaptınız.",
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
         }
@@ -905,6 +1187,9 @@ private fun GameHonestyCard() {
         "Ana sayfadaki sıcaklık PİL sıcaklığıdır. Oyun bittikten sonra da bir süre yüksek kalır; " +
             "şarj olurken oynamak, kılıf ve sıcak ortam üstüne ekler. \"Buz\" modu ve 38 °C ısı koruması " +
             "ısıyı en çok düşüren seçimdir; yine de oyun işlemci kaynaklıysa sıcaklık tamamen önlenemez.",
+        "Oyunun kendi motoru (ör. Minecraft'ın RenderDragon'ı) değiştirilemez; seçilebilen şey " +
+            "oyunun kullandığı grafik sürücüsü yoludur (yerel GLES ya da ANGLE/Vulkan). Etkisi GPU'ya " +
+            "göre artı ya da eksi olabilir; Son oyun oturumundan ölçerek karşılaştırın.",
         "Ekran Hz'si ve çözünürlük ayarları üreticiye (HyperOS) göre farklı davranabilir. " +
             "Uygulanamayan adımlar sonuç listesinde açıkça işaretlenir; başarı uydurulmaz.",
         "FPS değeri, oyunun kare zamanlarından (SurfaceFlinger) cihazda ölçülür; okunamazsa " +

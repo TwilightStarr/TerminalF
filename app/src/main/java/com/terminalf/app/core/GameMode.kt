@@ -139,7 +139,7 @@ val kGuardTempChoices: List<Int> = listOf(0, 38, 40, 42, 44)
 /** Kullanıcının seçtiği oyun modu ayarları. */
 data class GameModeConfig(
     val packageName: String = DEFAULT_GAME_PACKAGE,
-    /** 30, 60 ya da 90. */
+    /** [kFpsChoices] içinden bir değer. */
     val targetFps: Int = 90,
     /** 1.0 = çözünürlüğe dokunma; 0.5-0.9 = düşür. */
     val scale: Double = 0.6,
@@ -166,11 +166,30 @@ data class GameModeConfig(
     val batterySaver: Boolean = false,
     /** Pil sıcaklığı bu değere (°C) ulaşınca izleyici ek önlem alır; 0 = kapalı. */
     val guardTempC: Int = 40,
+    /** Oyun modu başlarken sırayla çalıştırılacak özel kabuk komutları (satır başına bir komut). */
+    val customStart: String = "",
+    /** "Geri Al" ile oturum kapanırken çalıştırılacak özel komutlar (satır başına bir komut). */
+    val customEnd: String = "",
+    /** Oyunun kullanacağı grafik sürücüsü arka ucu (bkz. GameEngine.kt). */
+    val backend: GraphicsBackend = GraphicsBackend.Default,
+    /** Oyun boyunca sabit performans modu (Android 12+; deneysel, ısıyı artırabilir). */
+    val fixedPerf: Boolean = false,
+    /** Ekranın kilitleneceği Hz; 0 = kare hızına göre otomatik. */
+    val refreshHz: Int = 0,
+    /** Parlaklık kısılınca mevcut değerin yüzdesi (20-90). */
+    val dimPercent: Int = 60,
+    /** İşlemci hız sınırı: donanım azami hızının yüzdesi (40-95). */
+    val cpuCapPercent: Int = 70,
 ) {
     val reducesResolution: Boolean get() = scale < 0.999
 
-    /** Ekran kilidi Hz değeri; 30 FPS hedefinde 60 Hz'e (30'un katı) kilitlenir. */
-    val lockHz: Int? get() = if (lockRefreshRate) (if (targetFps >= 60) targetFps else 60) else null
+    /** Ekran kilidi Hz değeri; elle seçilmediyse kare hızının tam katı olan panel hızı (30 -> 60). */
+    val lockHz: Int?
+        get() = when {
+            !lockRefreshRate -> null
+            refreshHz > 0 -> refreshHz
+            else -> autoLockHz(targetFps)
+        }
 
     fun toJson(): Map<String, Any?> = linkedMapOf(
         "package" to packageName,
@@ -187,6 +206,13 @@ data class GameModeConfig(
         "powerProfile" to powerProfile.arg,
         "batterySaver" to batterySaver,
         "guardTempC" to guardTempC,
+        "customStart" to customStart,
+        "customEnd" to customEnd,
+        "backend" to backend.json,
+        "fixedPerf" to fixedPerf,
+        "refreshHz" to refreshHz,
+        "dimPercent" to dimPercent,
+        "cpuCapPercent" to cpuCapPercent,
     )
 
     fun encode(): String = Json.stringify(toJson())
@@ -204,7 +230,7 @@ data class GameModeConfig(
             val guard = json.int("guardTempC")
             return GameModeConfig(
                 packageName = if (isSafePackage(pkg)) pkg else DEFAULT_GAME_PACKAGE,
-                targetFps = if (fps in listOf(30, 60, 90)) fps else 90,
+                targetFps = if (fps in kFpsChoices) fps else 90,
                 scale = scale.coerceIn(0.4, 1.0),
                 method = method,
                 lockRefreshRate = json.bool("lockRefreshRate") ?: true,
@@ -218,6 +244,13 @@ data class GameModeConfig(
                     ?: GamePower.Performance,
                 batterySaver = json.bool("batterySaver") ?: false,
                 guardTempC = if (guard != null && guard in kGuardTempChoices) guard else 40,
+                customStart = json.str("customStart") ?: "",
+                customEnd = json.str("customEnd") ?: "",
+                backend = GraphicsBackend.fromJson(json["backend"]),
+                fixedPerf = json.bool("fixedPerf") ?: false,
+                refreshHz = json.int("refreshHz")?.takeIf { it in kHzChoices } ?: 0,
+                dimPercent = (json.int("dimPercent") ?: 60).coerceIn(20, 90),
+                cpuCapPercent = (json.int("cpuCapPercent") ?: 70).coerceIn(40, 95),
             )
         }
 
@@ -275,6 +308,21 @@ data class GamePreset(
             config.batterySaver == batterySaver &&
             config.guardTempC == guardTempC
 }
+
+/** Özel komut metninin en çok kaç satırı ve satır başına kaç karakteri çalıştırılır. */
+const val kCustomMaxLines = 8
+const val kCustomMaxChars = 300
+
+/**
+ * Özel komut metnini çalıştırılacak satırlara böler: boş satırlar ve `#` ile başlayan yorum
+ * satırları atılır; satır sayısı ve uzunluğu sınırlıdır.
+ */
+fun customLines(text: String): List<String> =
+    text.replace("\r", "").split('\n')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && !it.startsWith("#") }
+        .map { it.take(kCustomMaxChars) }
+        .take(kCustomMaxLines)
 
 /** Her oyunda kullanılabilen hazır ayarlar (en seriniden en akıcıya). */
 val kGamePresets: List<GamePreset> = listOf(
@@ -452,6 +500,8 @@ data class GameSession(
     /** `policyN` -> önceki `scaling_max_freq` (kHz); yalnızca işlemci sınırı uygulandıysa dolu. */
     val cpuMax: Map<String, String> = emptyMap(),
     val startedAtMs: Long,
+    /** Bu oturum sabit performans modunu açtı mı? */
+    val fixedPerf: Boolean = false,
 ) {
     fun toJson(): Map<String, Any?> = linkedMapOf(
         "package" to packageName,
@@ -462,6 +512,7 @@ data class GameSession(
         "changedScreen" to changedScreen,
         "cpuMax" to cpuMax,
         "startedAtMs" to startedAtMs,
+        "fixedPerf" to fixedPerf,
     )
 
     fun encode(): String = Json.stringify(toJson())
@@ -484,6 +535,7 @@ data class GameSession(
                 changedScreen = json.bool("changedScreen") ?: false,
                 cpuMax = cpu,
                 startedAtMs = (json["startedAtMs"] as? Number)?.toLong() ?: 0L,
+                fixedPerf = json.bool("fixedPerf") ?: false,
             )
         }
 
@@ -509,7 +561,9 @@ fun downscaleArg(scale: Double): String {
 
 /**
  * Oyun modunu AÇAN adımlar. [physicalSize]/[physicalDensity] yalnızca
- * [ResolutionMethod.WholeScreen] için gerekir.
+ * [ResolutionMethod.WholeScreen] için, [angle] (mevcut ANGLE seçimi) yalnızca grafik motoru
+ * seçildiyse gerekir. [restartGame] ise sürücü değişiminin geçerli olması için çalışan oyunu
+ * kapatır (oyun hemen ardından başlatılacaksa).
  */
 fun buildApplySteps(
     config: GameModeConfig,
@@ -517,6 +571,8 @@ fun buildApplySteps(
     physicalDensity: Int? = null,
     brightness: Int? = null,
     cpuPolicies: List<CpuPolicy>? = null,
+    angle: AngleSelection? = null,
+    restartGame: Boolean = false,
 ): List<GameStep> {
     val pkg = config.packageName
     if (!isSafePackage(pkg)) return emptyList()
@@ -545,6 +601,10 @@ fun buildApplySteps(
             optional = true,
         ),
     )
+    buildBackendStep(config, angle)?.let { steps.add(it) }
+    if (config.fixedPerf) {
+        steps.add(GameStep("Sabit performans modu", kFixedPerfOn, optional = true))
+    }
 
     val hz = config.lockHz
     if (hz != null) {
@@ -570,7 +630,7 @@ fun buildApplySteps(
         )
     }
     if (config.dimScreen && brightness != null && brightness > 1) {
-        val dimmed = Math.round(brightness * kDimFraction).toInt().coerceIn(1, brightness)
+        val dimmed = Math.round(brightness * (config.dimPercent / 100.0)).toInt().coerceIn(1, brightness)
         steps.add(
             GameStep(
                 "Ekran parlaklığını kıs",
@@ -580,9 +640,9 @@ fun buildApplySteps(
         )
     }
     if (config.cpuCap && !cpuPolicies.isNullOrEmpty()) {
-        val cmd = cpuCapCommand(topPolicies(cpuPolicies), kCpuCapFraction)
+        val cmd = cpuCapCommand(topPolicies(cpuPolicies), config.cpuCapPercent / 100.0)
         if (cmd.isNotEmpty()) {
-            steps.add(GameStep("İşlemci hızını sınırla (%70)", cmd, optional = true))
+            steps.add(GameStep("İşlemci hızını sınırla (%${config.cpuCapPercent})", cmd, optional = true))
         }
     }
     if (config.batterySaver) {
@@ -615,6 +675,15 @@ fun buildApplySteps(
             GameStep(
                 "Ekran çözünürlüğü $size",
                 "wm size $size; wm density $density",
+            ),
+        )
+    }
+    if (restartGame && config.backend.settingValue != null && angle != null) {
+        steps.add(
+            GameStep(
+                "Oyunu kapat (grafik motoru yeniden yüklensin)",
+                "am force-stop $pkg",
+                optional = true,
             ),
         )
     }
@@ -677,6 +746,13 @@ fun buildRevertSteps(session: GameSession): List<GameStep> {
     if (lowPower.isNotEmpty()) {
         steps.add(GameStep("Pil Tasarrufu ayarını geri al", lowPower.joinToString("; "), optional = true))
     }
+    val angleRestore = restoreListCommands(session, kAngleKeys)
+    if (angleRestore.isNotEmpty()) {
+        steps.add(GameStep("Grafik motoru ayarını geri al", angleRestore.joinToString("; ")))
+    }
+    if (session.fixedPerf) {
+        steps.add(GameStep("Sabit performans modunu kapat", kFixedPerfOff, optional = true))
+    }
     val zen = restoreCommands(session, listOf(kZenKey))
     if (zen.isNotEmpty()) {
         steps.add(GameStep("Rahatsız Etme ayarını geri al", zen.joinToString("; ")))
@@ -711,6 +787,7 @@ fun buildGuardCommands(session: GameSession): List<String> {
     if (session.settings.containsKey(kLowPowerKey.id)) {
         cmds.add("settings put ${kLowPowerKey.namespace} ${kLowPowerKey.key} 1")
     }
+    if (session.fixedPerf) cmds.add(kFixedPerfOff)
     val key = "system:screen_brightness"
     val orig = session.settings[key]?.toIntOrNull()
     if (session.settings.containsKey(key) && orig != null && orig > 1) {

@@ -50,7 +50,7 @@ private const val ShizukuUrl = "https://shizuku.rikka.app/download/"
  * yoksa Shizuku adım adım hazırlanır.
  */
 suspend fun SheetHost.showControlSetup(control: ControlController) {
-    show<Unit> { close -> SetupBody(control = control, onClose = { close(null) }) }
+    show<Unit>(key = "control_setup") { close -> SetupBody(control = control, onClose = { close(null) }) }
 }
 
 @Composable

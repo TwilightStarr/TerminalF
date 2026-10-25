@@ -10,6 +10,7 @@ import com.terminalf.app.core.ShellIdentity
 import com.terminalf.app.core.ShellResult
 import com.terminalf.app.core.parseIdOutput
 import com.terminalf.app.core.parseWrappedOutput
+import com.terminalf.app.core.wrapForShell
 import com.terminalf.app.shizuku.IShellService
 import com.terminalf.app.shizuku.ShellUserService
 import com.terminalf.app.state.ShizukuAccess
@@ -48,6 +49,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
 
     private val appContext = context.applicationContext
     private val lock = Mutex()
+    private val bindLock = Mutex()
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
@@ -152,8 +154,9 @@ class ShizukuService(context: Context) : ShizukuAccess {
             return@withLock ShizukuProbe(running = true, permitted = false, error = "Shizuku izni verilmedi.")
         }
         try {
-            val svc = ensureService()
-            val raw = callExec(svc, "id", 15)
+            // Yeniden denetim: önceki hızlı-hata kaydı silinir, iki yol da yeniden denenir.
+            lastFailure = null
+            val raw = run("id", 15)
             val parsed = parseWrappedOutput(raw)
             val id = parseIdOutput(parsed.output)
             if (id != null && parsed.exitCode == 0) {
@@ -190,7 +193,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
             if (!p.ready) throw ShizukuUnavailableException(p.error ?: "Shizuku hazır değil.")
         }
         val raw = try {
-            callExec(lock.withLock { ensureService() }, command, 60)
+            run(command, 60)
         } catch (e: CancellationException) {
             throw e
         } catch (e: ShizukuUnavailableException) {
@@ -201,6 +204,89 @@ class ShizukuService(context: Context) : ShizukuAccess {
             throw ShizukuUnavailableException("Shizuku komutu çalıştıramadı: ${e.message ?: e.javaClass.simpleName}")
         }
         return parseWrappedOutput(raw)
+    }
+
+    private enum class Mode { Unknown, UserService, Remote }
+
+    @Volatile
+    private var mode = Mode.Unknown
+
+    /** Son başarısız bağlanma (zaman, neden): kısa süre içinde tekrar denemeden hemen hata verir. */
+    @Volatile
+    private var lastFailure: Pair<Long, String>? = null
+
+    /**
+     * Komutu çalıştırır. İki yol vardır:
+     *  1) UserService (ayrı süreç): hızlıdır ama bazı cihazlarda/sürümlerde hiç açılmaz.
+     *  2) Shizuku'nun doğrudan uzak süreci (`newProcess`): ek süreç/sınıf yüklemesi gerektirmez.
+     * İlk çalışan yol hatırlanır; biri çalışmazsa diğeri denenir. İkisi de çalışmazsa kısa süre
+     * boyunca tekrar beklenmez (art arda onlarca komutta dakikalarca takılmayı önler).
+     */
+    private suspend fun run(command: String, timeoutSeconds: Int): String {
+        lastFailure?.let { (at, why) ->
+            if (System.currentTimeMillis() - at < FAIL_FAST_MS) {
+                throw ShizukuUnavailableException(why)
+            }
+        }
+        if (mode != Mode.Remote) {
+            try {
+                val raw = callExec(bindLock.withLock { ensureService() }, command, timeoutSeconds)
+                mode = Mode.UserService
+                return raw
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                service = null
+                // UserService açılmadı: doğrudan Shizuku sürecini dene.
+                try {
+                    val raw = runRemote(command, timeoutSeconds)
+                    mode = Mode.Remote
+                    return raw
+                } catch (e2: CancellationException) {
+                    throw e2
+                } catch (e2: Exception) {
+                    val why = "${e.message ?: e.javaClass.simpleName}; yedek yol: ${e2.message ?: e2.javaClass.simpleName}"
+                    lastFailure = System.currentTimeMillis() to why
+                    throw ShizukuUnavailableException(why)
+                }
+            }
+        }
+        try {
+            return runRemote(command, timeoutSeconds)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            mode = Mode.Unknown
+            val why = e.message ?: e.javaClass.simpleName
+            lastFailure = System.currentTimeMillis() to why
+            throw ShizukuUnavailableException(why)
+        }
+    }
+
+    /** `Shizuku.newProcess` (13.x'te gizli) ile komutu Shizuku sunucusunda çalıştırır. */
+    private suspend fun runRemote(command: String, timeoutSeconds: Int): String {
+        val method = newProcessMethod
+            ?: throw ShizukuUnavailableException("Shizuku doğrudan süreç yolu bu sürümde yok")
+        val process = try {
+            method.invoke(null, arrayOf("sh", "-c", wrapForShell(command)), null, null) as Process
+        } catch (e: java.lang.reflect.InvocationTargetException) {
+            throw ShizukuUnavailableException("Shizuku süreci başlatamadı: ${(e.cause ?: e).message ?: "bilinmeyen hata"}")
+        }
+        val out = ProcessRunner.runExisting(process, (timeoutSeconds + 5) * 1000L)
+        return out.stdout + (if (out.stderr.isNotBlank()) "\n" + out.stderr else "")
+    }
+
+    private val newProcessMethod: java.lang.reflect.Method? by lazy {
+        try {
+            Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java,
+            ).apply { isAccessible = true }
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     /**
@@ -236,7 +322,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
         // Bir kez yeniden dener: ilk bağlanma, Shizuku'nun süreci ilk kez başlatması yüzünden
         // yavaş olabilir. Her denemenin gerçek nedeni ayrıca kaydedilir.
         var lastReason = "yanıt gelmedi"
-        for (attempt in 1..2) {
+        for (attempt in 1..1) {
             unbind()
             val outcome = bindOnce(BIND_TIMEOUT_MS)
             if (outcome.service != null) return outcome.service
@@ -316,6 +402,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
 
     private companion object {
         const val REQUEST_CODE = 4242
-        const val BIND_TIMEOUT_MS = 10_000L
+        const val BIND_TIMEOUT_MS = 8_000L
+        const val FAIL_FAST_MS = 20_000L
     }
 }

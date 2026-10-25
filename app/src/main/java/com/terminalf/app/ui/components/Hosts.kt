@@ -101,6 +101,7 @@ fun DialogHostContent(host: DialogHost) {
 class SheetEntry internal constructor(
     internal val content: @Composable (close: (Any?) -> Unit) -> Unit,
     internal val result: CompletableDeferred<Any?>,
+    internal val key: String? = null,
 )
 
 /**
@@ -111,10 +112,13 @@ class SheetHost {
     val stack = mutableStateListOf<SheetEntry>()
 
     @Suppress("UNCHECKED_CAST")
-    suspend fun <T> show(content: @Composable (close: (T?) -> Unit) -> Unit): T? {
+    suspend fun <T> show(key: String? = null, content: @Composable (close: (T?) -> Unit) -> Unit): T? {
+        // Aynı anahtarlı sayfa zaten açıksa (çift dokunuş) ikincisi açılmaz.
+        if (key != null && stack.any { it.key == key }) return null
         val entry = SheetEntry(
             content = { close -> content { v -> close(v) } },
             result = CompletableDeferred(),
+            key = key,
         )
         stack.add(entry)
         try {

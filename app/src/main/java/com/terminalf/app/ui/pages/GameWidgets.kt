@@ -3,6 +3,7 @@ package com.terminalf.app.ui.pages
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -278,4 +279,43 @@ internal fun GameGroup(
             }
         }
     }
+}
+
+
+/** Çok satırlı özel komut alanı. Yazdıkça [onChange] çağrılır. */
+@Composable
+internal fun GameCommandField(
+    initial: String,
+    placeholder: String,
+    resetKey: String,
+    onChange: (String) -> Unit,
+) {
+    val c = AppTheme.colors
+    var text by rememberSaveable(resetKey, placeholder) { mutableStateOf(initial) }
+    val shape = RoundedCornerShape(14.dp)
+    androidx.compose.foundation.text.BasicTextField(
+        value = text,
+        onValueChange = {
+            text = it
+            onChange(it)
+        },
+        textStyle = TextStyle(color = c.text, fontSize = 14.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(c.primary),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(autoCorrectEnabled = false),
+        modifier = Modifier.fillMaxWidth(),
+        decorationBox = { inner ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 84.dp)
+                    .background(c.surfaceHigh, shape)
+                    .padding(12.dp),
+            ) {
+                if (text.isEmpty()) {
+                    Text(placeholder, color = c.muted.faded(0.7f), fontSize = 13.sp)
+                }
+                inner()
+            }
+        },
+    )
 }
