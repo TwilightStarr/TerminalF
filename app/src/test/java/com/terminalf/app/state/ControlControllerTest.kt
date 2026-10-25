@@ -39,6 +39,16 @@ private class FakeShizuku : ShizukuAccess {
     override suspend fun exec(command: String): ShellResult = throw ShizukuUnavailableException("yok")
 }
 
+/** İzni var, ama test komutunun sonucunu testin istediği anda veren Shizuku. */
+private class ScriptedShizuku(val result: kotlinx.coroutines.CompletableDeferred<ShizukuProbe>) : ShizukuAccess {
+    override val identity: ShellIdentity? = null
+    override suspend fun probe(): ShizukuProbe = result.await()
+    override suspend fun isRunning() = true
+    override suspend fun hasPermission() = true
+    override suspend fun requestPermission() = true
+    override suspend fun exec(command: String): ShellResult = ShellResult("", 0)
+}
+
 private class FakeCatalog(private val tweaks: List<Tweak>) : TweakCatalog {
     override suspend fun loadTweaks(): List<Tweak> = tweaks
 }
@@ -107,5 +117,35 @@ class ControlControllerTest {
         val out = c.forceStop("x; reboot")
         assertFalse(out.ok)
         assertTrue(root.commands.none { it.contains("reboot") })
+    }
+
+    @Test fun shizukuIsUsableImmediatelyAndVerifiedInBackground() = runBlocking {
+        val result = kotlinx.coroutines.CompletableDeferred<ShizukuProbe>()
+        val c = ControlController(FakeRoot(false), ScriptedShizuku(result), FakeCatalog(emptyList()), CoroutineScope(Dispatchers.Unconfined))
+        c.init()
+        // Test komutu henüz bitmedi ama kullanıcı beklemeden kullanabilmeli.
+        assertTrue(c.ready)
+        assertTrue(c.verifying)
+        assertEquals(AccessPath.Shizuku, c.path)
+        result.complete(
+            ShizukuProbe(
+                running = true,
+                permitted = true,
+                identity = ShellIdentity(uid = 2000, name = "shell", raw = "uid=2000(shell)"),
+            ),
+        )
+        assertTrue(c.ready)
+        assertFalse(c.verifying)
+    }
+
+    @Test fun failedBackgroundVerificationFallsBackWithReason() = runBlocking {
+        val result = kotlinx.coroutines.CompletableDeferred<ShizukuProbe>()
+        val c = ControlController(FakeRoot(false), ScriptedShizuku(result), FakeCatalog(emptyList()), CoroutineScope(Dispatchers.Unconfined))
+        c.init()
+        assertTrue(c.ready)
+        result.complete(ShizukuProbe(running = true, permitted = true, error = "servis yanıt vermedi"))
+        assertFalse(c.ready)
+        assertEquals(ControlPhase.NeedsSetup, c.phase)
+        assertEquals("servis yanıt vermedi", c.error)
     }
 }

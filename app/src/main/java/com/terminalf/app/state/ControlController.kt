@@ -101,6 +101,12 @@ class ControlController(
         private set
     var settingUp: Boolean = false
         private set
+
+    /** Shizuku komut servisi arka planda doğrulanıyor (kullanıcı beklemeden kullanabilir). */
+    var verifying: Boolean = false
+        private set
+
+    private var verifyGeneration = 0
     var tweaks: List<Tweak> = emptyList()
         private set
 
@@ -157,13 +163,21 @@ class ControlController(
         detect()
     }
 
-    /** Yetki yolunu yeniden bulur: önce kök, sonra Shizuku. */
-    suspend fun detect() {
+    /**
+     * Yetki yolunu yeniden bulur: önce kök, sonra Shizuku.
+     *
+     * Shizuku için kullanıcı BEKLETİLMEZ: servis çalışıyor ve izin verilmişse hemen "hazır"
+     * sayılır; gerçek test komutu (`id`) arka planda koşar. Test başarısız olursa durum açıkça
+     * "kapalı"ya döner ve neden gösterilir (başarısızlık asla başarı gibi kalmaz).
+     */
+    suspend fun detect(recheckRoot: Boolean = true) {
         phase = ControlPhase.Checking
         error = null
+        verifying = false
+        verifyGeneration++
         notifyChanged()
 
-        if (root.hasRoot(forceRecheck = true)) {
+        if (root.hasRoot(forceRecheck = recheckRoot)) {
             path = AccessPath.Root
             identity = root.identity?.label ?: "root"
             phase = ControlPhase.Ready
@@ -173,21 +187,53 @@ class ControlController(
             return
         }
 
-        val probe = shizuku.probe()
-        shizukuRunning = probe.running
-        shizukuPermitted = probe.permitted
-        if (probe.ready) {
+        val running = shizuku.isRunning()
+        val permitted = running && shizuku.hasPermission()
+        shizukuRunning = running
+        shizukuPermitted = permitted
+        if (permitted) {
             path = AccessPath.Shizuku
-            identity = probe.identity?.label ?: "shell"
+            identity = shizuku.identity?.label ?: "Shizuku"
             phase = ControlPhase.Ready
-            addLog("✓ Shizuku hazır ($identity).")
+            verifying = true
+            val generation = verifyGeneration
+            addLog("✓ Shizuku izni var; komut servisi arka planda doğrulanıyor.")
             notifyChanged()
-            scope.launch { refreshStatuses() }
+            scope.launch { verifyShizuku(generation) }
         } else {
             path = AccessPath.None
             identity = ""
             phase = ControlPhase.NeedsSetup
+            error = if (!running) "Shizuku servisi çalışmıyor." else "Shizuku izni verilmedi."
+            notifyChanged()
+        }
+    }
+
+    /** Shizuku'nun gerçekten komut çalıştırdığını arka planda kanıtlar. */
+    private suspend fun verifyShizuku(generation: Int) {
+        val probe = try {
+            shizuku.probe()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            ShizukuProbe(running = true, permitted = true, error = "Doğrulama başarısız: ${e.message ?: e.javaClass.simpleName}")
+        }
+        // Bu arada yeniden denetim yapıldıysa eski sonuç yok sayılır.
+        if (generation != verifyGeneration) return
+        verifying = false
+        if (probe.ready) {
+            identity = probe.identity?.label ?: "shell"
+            addLog("✓ Shizuku doğrulandı ($identity).")
+            notifyChanged()
+            refreshStatuses()
+        } else {
+            path = AccessPath.None
+            identity = ""
+            phase = ControlPhase.NeedsSetup
+            shizukuRunning = probe.running
+            shizukuPermitted = probe.permitted
             error = probe.error
+            addLog("✗ Shizuku doğrulanamadı: ${probe.error ?: "bilinmeyen neden"}")
             notifyChanged()
         }
     }
@@ -205,7 +251,7 @@ class ControlController(
             if (!ready && shizukuRunning && !shizukuPermitted) {
                 val granted = shizuku.requestPermission()
                 addLog(if (granted) "✓ Shizuku izni verildi." else "✗ Shizuku izni verilmedi.")
-                detect()
+                detect(recheckRoot = false)
             }
         } finally {
             settingUp = false

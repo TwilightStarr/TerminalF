@@ -16,6 +16,9 @@ import com.terminalf.app.state.ShizukuAccess
 import com.terminalf.app.state.ShizukuProbe
 import com.terminalf.app.state.ShizukuUnavailableException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -45,6 +48,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
 
     private val appContext = context.applicationContext
     private val lock = Mutex()
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
     private var service: IShellService? = null
@@ -199,8 +203,21 @@ class ShizukuService(context: Context) : ShizukuAccess {
         return parseWrappedOutput(raw)
     }
 
-    private suspend fun callExec(svc: IShellService, command: String, timeoutSeconds: Int): String =
-        withContext(Dispatchers.IO) { svc.exec(command, timeoutSeconds) ?: "" }
+    /**
+     * Komutu servise iletir. Binder çağrısı bloklayıcıdır ve iptal edilemez; servis takılırsa
+     * sonsuza dek beklememek için çağrı ayrı iş parçacığında koşar ve süre dolunca bırakılır.
+     */
+    private suspend fun callExec(svc: IShellService, command: String, timeoutSeconds: Int): String {
+        val call = ioScope.async { svc.exec(command, timeoutSeconds) ?: "" }
+        val result = withTimeoutOrNull((timeoutSeconds + 5) * 1000L) { call.await() }
+        if (result == null) {
+            call.cancel()
+            service = null
+            identity = null
+            throw ShizukuUnavailableException("Komut servisi $timeoutSeconds sn içinde yanıt vermedi.")
+        }
+        return result
+    }
 
     /** Bağlı servisi döner; yoksa (ya da süreç öldüyse) yeniden bağlanır. */
     private suspend fun ensureService(): IShellService {
@@ -299,6 +316,6 @@ class ShizukuService(context: Context) : ShizukuAccess {
 
     private companion object {
         const val REQUEST_CODE = 4242
-        const val BIND_TIMEOUT_MS = 15_000L
+        const val BIND_TIMEOUT_MS = 10_000L
     }
 }

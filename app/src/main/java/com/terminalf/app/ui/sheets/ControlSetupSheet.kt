@@ -103,9 +103,13 @@ private fun SetupBody(control: ControlController, onClose: () -> Unit) {
         )
         SetupStep(
             index = 3,
-            done = ready,
+            done = ready && !control.verifying,
             title = "Test komutu başarılı",
-            detail = "Gerçek bir komut çalıştırılarak doğrulanır.",
+            detail = if (control.verifying) {
+                "Arka planda doğrulanıyor; beklemeden kullanabilirsin."
+            } else {
+                "Gerçek bir komut çalıştırılarak doğrulanır."
+            },
             last = true,
         )
         if (!ready && error != null) {
