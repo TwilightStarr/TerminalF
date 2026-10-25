@@ -24,7 +24,7 @@ bu deponun bağlantısını vermen yeterli.
 
 Üst üste güncellemenin çalışması için iki şey sabit tutulur:
 
-- **Aynı imza:** Her sürüm aynı anahtarla imzalanır. Anahtar depoda tutulmaz, GitHub Secrets'ta `KEYSTORE_BASE64` adıyla durur. Değiştirme.
+- **Aynı imza:** Her sürüm aynı anahtarla imzalanır. Anahtarı ilk derlemede GitHub Actions kendisi üretir ve `signing-keys` dalına kaydeder; sonraki derlemeler onu kullanır. Bu dalı silme.
 - **Artan sürüm numarası:** `versionCode` her derlemede otomatik olarak büyür (dakika bazlı), elle artırmak gerekmez.
 
 `applicationId` değerini (`com.example.terminal_flutter`) değiştirme; değişirse Android bunu yeni bir uygulama sayar.
@@ -41,8 +41,8 @@ Gereksinimler: JDK 17, Android SDK 35. `main` dalına yapılan her push; test ç
 otomatik olarak yeni bir Release yayınlar (`.github/workflows/build.yml`). Commit mesajına `[minor]` veya
 `[major]` yazarak sürümü büyütebilirsin.
 
-Release derlemesi için GitHub'da **Settings → Secrets and variables → Actions** altına `KEYSTORE_BASE64`
-secret'ı eklenmelidir; yoksa derleme bilerek durur.
+Release derlemesi için elle bir ayar gerekmez. İstersen kendi anahtarını `KEYSTORE_BASE64` adlı GitHub secret'ı
+olarak ekleyebilirsin; tanımlıysa o kullanılır (anahtarı bir kez seçtikten sonra değiştirme).
 
 ## Gereksinimler
 
