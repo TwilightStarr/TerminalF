@@ -142,7 +142,17 @@ class AppSettings(private val store: SettingsStore) : Observable() {
         }
         Haptics.enabled = haptics
         Motion.enabled = animations
+        I18n.language = language
         notifyChanged()
+    }
+
+    /** Arayüz dilini değiştirir; arayüz yeni dille baştan çizilir (bkz. `AppRoot`). */
+    fun setLanguage(value: AppLanguage) {
+        if (language == value) return
+        language = value
+        I18n.language = value
+        notifyChanged()
+        safe { store.writeString(LANGUAGE_KEY, value.tag) }
     }
 
     private inline fun safe(write: () -> Unit) {
