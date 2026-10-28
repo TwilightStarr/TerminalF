@@ -2,7 +2,9 @@
   {
     "id": "debloat_facebook_stubs",
     "title": "Facebook Sistem Bileşenlerini Kapat",
+    "titleEn": "Disable Facebook System Components",
     "description": "Bazı üreticilerin fabrika çıkışlı yüklediği Facebook App Manager/Services/System bileşenlerini devre dışı bırakır. Facebook uygulamasını kullanmıyorsanız güvenlidir.",
+    "descriptionEn": "Disables the Facebook App Manager/Services/System components that some manufacturers install at the factory. Safe if you don't use the Facebook app.",
     "category": "debloat",
     "applyCommand": "pm disable-user --user 0 com.facebook.appmanager; pm disable-user --user 0 com.facebook.services; pm disable-user --user 0 com.facebook.system",
     "revertCommand": "pm enable com.facebook.appmanager; pm enable com.facebook.services; pm enable com.facebook.system",
@@ -14,7 +16,9 @@
   {
     "id": "debloat_google_feedback",
     "title": "Google Geri Bildirim Ajanını Kapat",
+    "titleEn": "Disable Google Feedback Agent",
     "description": "Çökme/hata raporlarını Google'a gönderen arka plan servisini devre dışı bırakır.",
+    "descriptionEn": "Disables the background service that sends crash/error reports to Google.",
     "category": "debloat",
     "applyCommand": "pm disable-user --user 0 com.google.android.feedback",
     "revertCommand": "pm enable com.google.android.feedback",
@@ -26,7 +30,9 @@
   {
     "id": "debloat_onetime_initializer",
     "title": "GMS Tek Seferlik Başlatıcıyı Kapat",
+    "titleEn": "Disable GMS One-Time Initializer",
     "description": "İlk kurulumdan sonra tekrar çalışmasına gerek kalmayan Google Play Hizmetleri ilk kurulum bileşenini devre dışı bırakır.",
+    "descriptionEn": "Disables the Google Play services first-setup component that no longer needs to run after initial setup.",
     "category": "debloat",
     "applyCommand": "pm disable-user --user 0 com.google.android.onetimeinitializer",
     "revertCommand": "pm enable com.google.android.onetimeinitializer",
@@ -38,7 +44,9 @@
   {
     "id": "performance_disable_animations",
     "title": "Sistem Animasyonlarını Kapat",
+    "titleEn": "Turn Off System Animations",
     "description": "Pencere, geçiş ve animatör ölçeklerini 0 yaparak arayüzü daha hızlı hissettirir.",
+    "descriptionEn": "Sets the window, transition and animator scales to 0 so the interface feels faster.",
     "category": "performance",
     "applyCommand": "settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0",
     "revertCommand": "settings put global window_animation_scale 1; settings put global transition_animation_scale 1; settings put global animator_duration_scale 1",
@@ -50,7 +58,9 @@
   {
     "id": "performance_force_gpu_rendering",
     "title": "GPU ile Zorla Render Et",
+    "titleEn": "Force GPU Rendering",
     "description": "2B çizimlerde de GPU hızlandırmasını zorlar (Geliştirici Seçenekleri > Force GPU rendering ile aynı ayar).",
+    "descriptionEn": "Forces GPU acceleration for 2D drawing too (same as Developer Options > Force GPU rendering).",
     "category": "performance",
     "applyCommand": "settings put global force_gpu_rendering 1",
     "revertCommand": "settings put global force_gpu_rendering 0",
@@ -62,7 +72,9 @@
   {
     "id": "performance_disable_adaptive_battery",
     "title": "Adaptif Pil Kısıtlamalarını Kapat",
+    "titleEn": "Turn Off Adaptive Battery Restrictions",
     "description": "Sistemin nadiren kullandığınızı düşündüğü uygulamaları arka planda agresifçe kısıtlamasını (bekleme kovaları) durdurur. Bildirimlerin geç gelmesi/arka plan senkronunun gecikmesi gibi sorunları giderir; karşılığında pil ömründen biraz feragat edersiniz.",
+    "descriptionEn": "Stops the system from aggressively restricting apps it thinks you rarely use (standby buckets). Fixes late notifications and delayed background sync, at the cost of some battery life.",
     "category": "performance",
     "applyCommand": "settings put global adaptive_battery_management_enabled 0",
     "revertCommand": "settings put global adaptive_battery_management_enabled 1",
@@ -74,7 +86,9 @@
   {
     "id": "performance_force_peak_refresh_rate",
     "title": "Ekranı Her Zaman Maksimum Hızda Tut",
+    "titleEn": "Always Keep the Display at Peak Speed",
     "description": "Ekranın destekleyebileceği en yüksek yenileme hızını (ör. 90/120 Hz) her durumda zorlar, kaydırma ve animasyonlar daha akıcı/FPS'li hissettirir. Karşılığında pil tüketimi artar - performansı pilden önceliklendirenler için.",
+    "descriptionEn": "Forces the highest refresh rate the display supports (e.g. 90/120 Hz) at all times, so scrolling and animations feel smoother. Battery use goes up - for those who prefer performance over battery.",
     "category": "performance",
     "applyCommand": "settings put system peak_refresh_rate 120.0; settings put system min_refresh_rate 120.0",
     "revertCommand": "settings delete system peak_refresh_rate; settings delete system min_refresh_rate",
@@ -86,7 +100,9 @@
   {
     "id": "performance_cap_refresh_rate_battery",
     "title": "Yenileme Hızını 60Hz'e Sabitle (Pil Tasarrufu)",
+    "titleEn": "Lock Refresh Rate to 60 Hz (Battery Saving)",
     "description": "Ekranı sabit 60Hz'de tutarak yüksek yenileme hızının pil maliyetinden kaçınır. Yukarıdaki 'Maksimum Hızda Tut' tweak'inin tam tersidir - ikisini aynı anda açmayın, hangisini istiyorsanız yalnız onu açın.",
+    "descriptionEn": "Keeps the display at a fixed 60 Hz to avoid the battery cost of a high refresh rate. It is the exact opposite of the 'Always Keep the Display at Peak Speed' tweak - don't enable both, turn on only the one you want.",
     "category": "performance",
     "applyCommand": "settings put system peak_refresh_rate 60.0; settings put system min_refresh_rate 60.0",
     "revertCommand": "settings delete system peak_refresh_rate; settings delete system min_refresh_rate",
@@ -98,7 +114,9 @@
   {
     "id": "performance_kill_background",
     "title": "Arka Plan Uygulamalarını Temizle",
+    "titleEn": "Clear Background Apps",
     "description": "Şu anda arka planda çalışan uygulamaları sonlandırır (tek seferlik eylem, RAM'i anlık olarak boşaltır).",
+    "descriptionEn": "Ends the apps currently running in the background (one-time action, frees RAM instantly).",
     "category": "performance",
     "applyCommand": "am kill-all",
     "revertCommand": null,
@@ -108,7 +126,9 @@
   {
     "id": "privacy_limit_ad_tracking",
     "title": "Reklam Takibini Sınırla",
+    "titleEn": "Limit Ad Tracking",
     "description": "Kişiselleştirilmiş reklamlar için kullanılan reklam kimliği takibini sınırlar.",
+    "descriptionEn": "Limits tracking by the advertising ID used for personalized ads.",
     "category": "privacy",
     "applyCommand": "settings put global limit_ad_tracking 1",
     "revertCommand": "settings put global limit_ad_tracking 0",
@@ -120,7 +140,9 @@
   {
     "id": "privacy_disable_error_reports",
     "title": "Otomatik Hata Raporlarını Kapat",
+    "titleEn": "Turn Off Automatic Error Reports",
     "description": "Uygulama çökmelerinde sistemin otomatik olarak Google'a hata raporu göndermesini engeller.",
+    "descriptionEn": "Prevents the system from automatically sending error reports to Google when apps crash.",
     "category": "privacy",
     "applyCommand": "settings put secure send_action_app_error 0",
     "revertCommand": "settings put secure send_action_app_error 1",
@@ -132,7 +154,9 @@
   {
     "id": "debloat_print_recommendation",
     "title": "Yazdırma Servis Önerisini Kapat",
+    "titleEn": "Disable Print Service Recommendations",
     "description": "Yazıcı bulunduğunda arka planda çalışıp uyumlu yazdırma servisi öneren, neredeyse kimsenin kullanmadığı sistem bileşenini devre dışı bırakır. Yazdırma yapmıyorsanız tamamen güvenli ve anında geri alınabilir.",
+    "descriptionEn": "Disables the system component, which almost nobody uses, that runs in the background and recommends compatible print services when a printer is found. Completely safe and instantly reversible if you do not print.",
     "category": "debloat",
     "applyCommand": "pm disable-user --user 0 com.android.printservice.recommendation",
     "revertCommand": "pm enable com.android.printservice.recommendation",
@@ -144,7 +168,9 @@
   {
     "id": "privacy_disable_always_scanning",
     "title": "Sürekli Wi-Fi/Bluetooth Taramasını Kapat",
+    "titleEn": "Turn Off Constant Wi-Fi/Bluetooth Scanning",
     "description": "Wi-Fi veya Bluetooth kapalıyken bile konum doğruluğu için yapılan sürekli tarama davranışını devre dışı bırakır.",
+    "descriptionEn": "Disables the constant scanning done for location accuracy even when Wi-Fi or Bluetooth is turned off.",
     "category": "privacy",
     "applyCommand": "settings put global wifi_scan_always_enabled 0; settings put global ble_scan_always_enabled 0",
     "revertCommand": "settings put global wifi_scan_always_enabled 1; settings put global ble_scan_always_enabled 1",
@@ -156,7 +182,9 @@
   {
     "id": "battery_saver_mode",
     "title": "Pil Tasarrufu Modunu Aç",
+    "titleEn": "Turn On Battery Saver",
     "description": "Sistemin yerleşik pil tasarrufu modunu açar: arka plan işlerini ve görsel efektleri kısıtlar.",
+    "descriptionEn": "Turns on the system's built-in battery saver: restricts background work and visual effects.",
     "category": "performance",
     "applyCommand": "settings put global low_power 1",
     "revertCommand": "settings put global low_power 0",
@@ -168,7 +196,9 @@
   {
     "id": "cleanup_trim_caches",
     "title": "Tüm Uygulama Önbelleklerini Temizle",
+    "titleEn": "Clear All App Caches",
     "description": "Cihazdaki tüm uygulamaların önbelleklerini siler ve depolama alanı açar (tek seferlik eylem, veri kaybı olmaz).",
+    "descriptionEn": "Deletes the caches of all apps on the device and frees up storage (one-time action, no data loss).",
     "category": "debloat",
     "applyCommand": "pm trim-caches 999999999999",
     "revertCommand": null,
@@ -178,7 +208,9 @@
   {
     "id": "performance_bg_dexopt",
     "title": "Arka Plan Optimizasyonunu Çalıştır",
+    "titleEn": "Run Background Optimization",
     "description": "Uygulamaların derlenmiş kodunu şimdi yeniler; uygulama açılışlarını hızlandırabilir (tek seferlik, birkaç dakika sürebilir).",
+    "descriptionEn": "Refreshes the compiled code of apps now; can speed up app launches (one-time, may take a few minutes).",
     "category": "performance",
     "applyCommand": "cmd package bg-dexopt-job",
     "revertCommand": null,

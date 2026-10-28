@@ -1,5 +1,6 @@
 package com.terminalf.app.ui.sheets
 
+import com.terminalf.app.core.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -74,17 +75,17 @@ private fun SetupBody(control: ControlController, onClose: () -> Unit) {
     ) {
         Spacer(Modifier.height(4.dp))
         Text(
-            "Tam Kontrolü Etkinleştir",
+            tr("Enable Full Control", "Tam Kontrolü Etkinleştir"),
             color = c.text,
             fontSize = 22.sp,
             fontWeight = FontWeight.ExtraBold,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "Telefonu gerçekten yönetebilmek (uygulamaları durdurmak, " +
-                "önbellek temizlemek, sistem ayarlarını optimize etmek) için " +
-                "sistem yetkisi gerekir. Root varsa otomatik kullanılır; yoksa " +
-                "ücretsiz Shizuku uygulaması yeterlidir. Bilgisayar gerekmez.",
+            tr(
+                "To truly manage the phone (stop apps, clear caches, optimize system settings) system permission is required. Root is used automatically if available; otherwise the free Shizuku app is enough. No computer needed.",
+                "Telefonu gerçekten yönetebilmek (uygulamaları durdurmak, önbellek temizlemek, sistem ayarlarını optimize etmek) için sistem yetkisi gerekir. Root varsa otomatik kullanılır; yoksa ücretsiz Shizuku uygulaması yeterlidir. Bilgisayar gerekmez.",
+            ),
             color = c.muted,
             lineHeight = (14 * 1.45).sp,
         )
@@ -92,23 +93,23 @@ private fun SetupBody(control: ControlController, onClose: () -> Unit) {
         SetupStep(
             index = 1,
             done = running,
-            title = "Shizuku çalışıyor",
-            detail = "Shizuku'yu açın ve \"Kablosuz hata ayıklama ile başlat\" seçeneğini kullanın (Android 11+).",
+            title = tr("Shizuku is running", "Shizuku çalışıyor"),
+            detail = tr("Open Shizuku and use the \"Start via Wireless debugging\" option (Android 11+).", "Shizuku'yu açın ve \"Kablosuz hata ayıklama ile başlat\" seçeneğini kullanın (Android 11+)."),
         )
         SetupStep(
             index = 2,
             done = permitted,
-            title = "TerminalF'e izin ver",
-            detail = "Aşağıdaki düğme izin penceresini açar.",
+            title = tr("Grant permission to TerminalF", "TerminalF'e izin ver"),
+            detail = tr("The button below opens the permission dialog.", "Aşağıdaki düğme izin penceresini açar."),
         )
         SetupStep(
             index = 3,
             done = ready && !control.verifying,
-            title = "Test komutu başarılı",
+            title = tr("Test command succeeded", "Test komutu başarılı"),
             detail = if (control.verifying) {
-                "Arka planda doğrulanıyor; beklemeden kullanabilirsin."
+                tr("Verifying in the background; you can use it right away.", "Arka planda doğrulanıyor; beklemeden kullanabilirsin.")
             } else {
-                "Gerçek bir komut çalıştırılarak doğrulanır."
+                tr("Verified by running a real command.", "Gerçek bir komut çalıştırılarak doğrulanır.")
             },
             last = true,
         )
@@ -119,22 +120,22 @@ private fun SetupBody(control: ControlController, onClose: () -> Unit) {
         Spacer(Modifier.height(18.dp))
         if (ready) {
             PrimaryButton(
-                label = "Hazır — Kapat",
+                label = tr("Ready — Close", "Hazır — Kapat"),
                 icon = Icons.Rounded.Check,
                 onClick = onClose,
             )
         } else if (!running) {
             PrimaryButton(
-                label = "Shizuku'yu Aç",
+                label = tr("Open Shizuku", "Shizuku'yu Aç"),
                 icon = Icons.AutoMirrored.Rounded.OpenInNew,
                 onClick = {
                     container.appsService.launch(ShizukuPackage)
-                    toast.show("Shizuku açılıyor… Açılmazsa önce indirin.")
+                    toast.show(tr("Opening Shizuku… If it does not open, download it first.", "Shizuku açılıyor… Açılmazsa önce indirin."))
                 },
             )
         } else {
             PrimaryButton(
-                label = "İzin Ver ve Bitir",
+                label = tr("Grant Permission & Finish", "İzin Ver ve Bitir"),
                 icon = Icons.Rounded.LockOpen,
                 busy = control.settingUp,
                 onClick = { scope.launch { control.setUp() } },
@@ -144,14 +145,14 @@ private fun SetupBody(control: ControlController, onClose: () -> Unit) {
             Spacer(Modifier.height(10.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
                 SoftButton(
-                    label = "Shizuku'yu İndir",
+                    label = tr("Download Shizuku", "Shizuku'yu İndir"),
                     icon = Icons.Rounded.Download,
                     onClick = { container.catalog.openUrl(ShizukuUrl) },
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(10.dp))
                 SoftButton(
-                    label = "Yeniden Denetle",
+                    label = tr("Check Again", "Yeniden Denetle"),
                     icon = Icons.Rounded.Refresh,
                     onClick = if (control.checking) null else ({ scope.launch { control.detect() } }),
                     modifier = Modifier.weight(1f),

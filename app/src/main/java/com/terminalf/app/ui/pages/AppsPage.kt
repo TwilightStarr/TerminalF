@@ -1,5 +1,7 @@
 package com.terminalf.app.ui.pages
 
+import com.terminalf.app.core.plural
+import com.terminalf.app.core.tr
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -171,7 +173,7 @@ fun AppsPage(control: ControlController) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Uygulamalar",
+                tr("Apps", "Uygulamalar"),
                 modifier = Modifier.weight(1f),
                 fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -180,7 +182,7 @@ fun AppsPage(control: ControlController) {
             IconButton(onClick = { openFrozen() }) {
                 Icon(
                     Icons.Rounded.AcUnit,
-                    contentDescription = "Dondurulmuş uygulamalar",
+                    contentDescription = tr("Frozen apps", "Dondurulmuş uygulamalar"),
                     tint = c.muted,
                 )
             }
@@ -188,7 +190,7 @@ fun AppsPage(control: ControlController) {
                 onClick = { scope.launch { load() } },
                 enabled = !loading,
             ) {
-                Icon(Icons.Rounded.Refresh, contentDescription = "Yenile", tint = c.muted)
+                Icon(Icons.Rounded.Refresh, contentDescription = tr("Refresh", "Yenile"), tint = c.muted)
             }
         }
 
@@ -226,13 +228,13 @@ fun AppsPage(control: ControlController) {
                     )
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                         if (query.isEmpty()) {
-                            Text("Uygulama ara", color = c.muted, fontSize = 16.sp, maxLines = 1)
+                            Text(tr("Search apps", "Uygulama ara"), color = c.muted, fontSize = 16.sp, maxLines = 1)
                         }
                         inner()
                     }
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { query = "" }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Temizle", tint = c.muted)
+                            Icon(Icons.Rounded.Close, contentDescription = tr("Clear", "Temizle"), tint = c.muted)
                         }
                     } else {
                         Spacer(Modifier.width(12.dp))
@@ -248,12 +250,12 @@ fun AppsPage(control: ControlController) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                if (loading) "Yükleniyor…" else "${filtered.size} uygulama",
+                if (loading) tr("Loading…", "Yükleniyor…") else tr("${filtered.size} ${plural(filtered.size, "app", "apps")}", "${filtered.size} uygulama"),
                 modifier = Modifier.weight(1f),
                 color = c.muted,
                 fontSize = 13.sp,
             )
-            Text("Sistem uygulamaları", color = c.muted, fontSize = 13.sp)
+            Text(tr("System apps", "Sistem uygulamaları"), color = c.muted, fontSize = 13.sp)
             Spacer(Modifier.width(6.dp))
             Switch(
                 checked = showSystem,
@@ -276,9 +278,9 @@ fun AppsPage(control: ControlController) {
                 Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
                         if (apps.isEmpty()) {
-                            "Uygulama listesi alınamadı.\nBu özellik yalnızca Android'de çalışır."
+                            tr("Could not load the app list.\nThis feature only works on Android.", "Uygulama listesi alınamadı.\nBu özellik yalnızca Android'de çalışır.")
                         } else {
-                            "Aramanızla eşleşen uygulama yok."
+                            tr("No apps match your search.", "Aramanızla eşleşen uygulama yok.")
                         },
                         textAlign = TextAlign.Center,
                         color = c.muted,
@@ -431,49 +433,49 @@ private fun ActionsSheet(
     fun forceStop() {
         if (!control.ready) {
             service.openSystemSettings(pkg)
-            toast.show("Açılan ekranda \"Zorla Durdur\"a basın. Tek dokunuş için tam kontrolü etkinleştirin.")
+            toast.show(tr("On the screen that opens, tap \"Force stop\". Enable full control for one-tap use.", "Açılan ekranda \"Zorla Durdur\"a basın. Tek dokunuş için tam kontrolü etkinleştirin."))
             return
         }
-        doAction("Durdur") { control.forceStop(pkg) }
+        doAction(tr("Force Stop", "Durdur")) { control.forceStop(pkg) }
     }
 
     fun freeze() {
         if (needControl()) return
         if (isProtectedPackage(pkg)) {
-            toast.show("Bu uygulama sistem için kritik; dondurulamaz.")
+            toast.show(tr("This app is critical for the system; it cannot be frozen.", "Bu uygulama sistem için kritik; dondurulamaz."))
             return
         }
         scope.launch {
             val ok = dialogs.confirm(
-                title = "${app.name} dondurulsun mu?",
-                message = "Uygulama devre dışı kalır ve listeden/ekrandan kaybolur. " +
-                    "Üstteki ❄ düğmesinden istediğiniz zaman tekrar etkinleştirebilirsiniz.",
-                confirmLabel = "Dondur",
+                title = tr("Freeze ${app.name}?", "${app.name} dondurulsun mu?"),
+                message = tr("The app is disabled and disappears from the list and the screen. ", "Uygulama devre dışı kalır ve listeden/ekrandan kaybolur. ") +
+                    tr("You can re-enable it any time with the ❄ button at the top.", "Üstteki ❄ düğmesinden istediğiniz zaman tekrar etkinleştirebilirsiniz."),
+                confirmLabel = tr("Freeze", "Dondur"),
             )
             if (!ok) return@launch
-            doAction("Dondur", reload = true) { control.freeze(pkg) }
+            doAction(tr("Freeze", "Dondur"), reload = true) { control.freeze(pkg) }
         }
     }
 
     fun uninstall() {
         if (isProtectedPackage(pkg)) {
-            toast.show("Bu uygulama sistem için kritik; kaldırılamaz.")
+            toast.show(tr("This app is critical for the system; it cannot be uninstalled.", "Bu uygulama sistem için kritik; kaldırılamaz."))
             return
         }
         scope.launch {
             val ok = dialogs.confirm(
-                title = "${app.name} kaldırılsın mı?",
+                title = tr("Uninstall ${app.name}?", "${app.name} kaldırılsın mı?"),
                 message = if (control.ready) {
-                    "Uygulama bu kullanıcı için kaldırılır. Sistem uygulamalarını ileride geri yüklemek zor olabilir."
+                    tr("The app is uninstalled for this user. Restoring system apps later can be difficult.", "Uygulama bu kullanıcı için kaldırılır. Sistem uygulamalarını ileride geri yüklemek zor olabilir.")
                 } else {
-                    "Sistemin kaldırma onayı açılacak."
+                    tr("The system uninstall prompt will open.", "Sistemin kaldırma onayı açılacak.")
                 },
-                confirmLabel = "Kaldır",
+                confirmLabel = tr("Uninstall", "Kaldır"),
                 danger = true,
             )
             if (!ok) return@launch
             if (control.ready) {
-                doAction("Kaldır", reload = true) { control.uninstallForUser(pkg) }
+                doAction(tr("Uninstall", "Kaldır"), reload = true) { control.uninstallForUser(pkg) }
             } else {
                 val done = service.uninstall(pkg)
                 if (done) close(true)
@@ -514,7 +516,7 @@ private fun ActionsSheet(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             ActionButton(
                 icon = Icons.Rounded.PlayArrow,
-                label = "Aç",
+                label = tr("Open", "Aç"),
                 modifier = Modifier.weight(1f),
                 onTap = {
                     service.launch(pkg)
@@ -523,8 +525,8 @@ private fun ActionsSheet(
             )
             ActionButton(
                 icon = Icons.Outlined.StopCircle,
-                label = "Durdur",
-                busy = working == "Durdur",
+                label = tr("Force Stop", "Durdur"),
+                busy = working == tr("Force Stop", "Durdur"),
                 modifier = Modifier.weight(1f),
                 onTap = { forceStop() },
             )
@@ -533,18 +535,18 @@ private fun ActionsSheet(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             ActionButton(
                 icon = Icons.Rounded.CleaningServices,
-                label = "Önbellek Temizle",
-                busy = working == "Önbellek",
+                label = tr("Clear Cache", "Önbellek Temizle"),
+                busy = working == tr("Cache", "Önbellek"),
                 modifier = Modifier.weight(1f),
                 onTap = {
                     if (!needControl()) {
-                        doAction("Önbellek") { control.clearAppCache(pkg) }
+                        doAction(tr("Cache", "Önbellek")) { control.clearAppCache(pkg) }
                     }
                 },
             )
             ActionButton(
                 icon = Icons.Outlined.Info,
-                label = "Sistem Bilgisi",
+                label = tr("System Info", "Sistem Bilgisi"),
                 modifier = Modifier.weight(1f),
                 onTap = { service.openSystemSettings(pkg) },
             )
@@ -553,16 +555,16 @@ private fun ActionsSheet(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             ActionButton(
                 icon = Icons.Rounded.AcUnit,
-                label = "Dondur",
-                busy = working == "Dondur",
+                label = tr("Freeze", "Dondur"),
+                busy = working == tr("Freeze", "Dondur"),
                 modifier = Modifier.weight(1f),
                 onTap = { freeze() },
             )
             ActionButton(
                 icon = Icons.Rounded.DeleteOutline,
-                label = "Kaldır",
+                label = tr("Uninstall", "Kaldır"),
                 danger = true,
-                busy = working == "Kaldır",
+                busy = working == tr("Uninstall", "Kaldır"),
                 modifier = Modifier.weight(1f),
                 onTap = { uninstall() },
             )
@@ -626,7 +628,7 @@ private fun FrozenSheet(control: ControlController, toast: Toaster, scope: Corou
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            error = "Liste okunamadı."
+            error = tr("Could not read the list.", "Liste okunamadı.")
         }
     }
 
@@ -656,7 +658,7 @@ private fun FrozenSheet(control: ControlController, toast: Toaster, scope: Corou
             contentAlignment = Alignment.CenterStart,
         ) {
             Text(
-                "Dondurulmuş Uygulamalar",
+                tr("Frozen Apps", "Dondurulmuş Uygulamalar"),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = c.text,
@@ -673,7 +675,7 @@ private fun FrozenSheet(control: ControlController, toast: Toaster, scope: Corou
                 }
             } else if (list.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Dondurulmuş uygulama yok.", color = c.muted)
+                    Text(tr("No frozen apps.", "Dondurulmuş uygulama yok."), color = c.muted)
                 }
             } else {
                 LazyColumn(
@@ -700,7 +702,7 @@ private fun FrozenSheet(control: ControlController, toast: Toaster, scope: Corou
                                     strokeWidth = 2.2.dp,
                                 )
                             } else {
-                                SoftButton(label = "Etkinleştir", onClick = { enable(pkg) })
+                                SoftButton(label = tr("Enable", "Etkinleştir"), onClick = { enable(pkg) })
                             }
                         }
                     }

@@ -123,15 +123,31 @@ enum class ResolutionMethod(val json: String) {
  * Android GameManager güç profili. `Battery` en serin, `Performance` en sıcak profildir;
  * birçok cihazda `Performance` işlemci/GPU hızını yükseltir.
  */
-enum class GamePower(val arg: String, val code: Int, val label: String, val hint: String) {
-    Battery("battery", 3, "Serin (pil)", "Sistem oyunu enerji tasarruflu çalıştırır; ısınma en az."),
-    Standard("standard", 1, "Standart", "Üreticinin varsayılan oyun davranışı."),
-    Performance(
-        "performance",
-        2,
-        "Performans",
-        "İşlemci/GPU daha çok çalışır; daha akıcı ama belirgin daha sıcak.",
-    ),
+enum class GamePower(val arg: String, val code: Int) {
+    Battery("battery", 3),
+    Standard("standard", 1),
+    Performance("performance", 2),
+    ;
+
+    val label: String
+        get() = when (this) {
+            Battery -> tr("Cool (battery)", "Serin (pil)")
+            Standard -> tr("Standard", "Standart")
+            Performance -> tr("Performance", "Performans")
+        }
+
+    val hint: String
+        get() = when (this) {
+            Battery -> tr(
+                "The system runs the game in power-saving mode; least heat.",
+                "Sistem oyunu enerji tasarruflu çalıştırır; ısınma en az.",
+            )
+            Standard -> tr("The manufacturer's default game behavior.", "Üreticinin varsayılan oyun davranışı.")
+            Performance -> tr(
+                "CPU/GPU work harder; smoother but noticeably hotter.",
+                "İşlemci/GPU daha çok çalışır; daha akıcı ama belirgin daha sıcak.",
+            )
+        }
 }
 
 /** Pil sıcaklığı koruması için seçilebilir eşikler (°C). 0 = kapalı. */
@@ -334,12 +350,17 @@ fun customLines(text: String): List<String> =
         .take(kCustomMaxLines)
 
 /** Her oyunda kullanılabilen hazır ayarlar (en seriniden en akıcıya). */
-val kGamePresets: List<GamePreset> = listOf(
+val kGamePresets: List<GamePreset>
+    get() = listOf(
     GamePreset(
         id = "ice",
-        title = "Buz",
-        subtitle = "En serin: 30 FPS · %40 çözünürlük · serin güç profili · Pil Tasarrufu · " +
-            "parlaklık kısık · animasyonlar kapalı · bildirimler sessiz · ısı koruması 38 °C.",
+        title = tr("Ice", "Buz"),
+        subtitle = tr(
+            "Coolest: 30 FPS · 40% resolution · cool power profile · Battery Saver · " +
+                "dimmed brightness · animations off · notifications silenced · thermal guard 38 °C.",
+            "En serin: 30 FPS · %40 çözünürlük · serin güç profili · Pil Tasarrufu · " +
+                "parlaklık kısık · animasyonlar kapalı · bildirimler sessiz · ısı koruması 38 °C.",
+        ),
         targetFps = 30,
         scale = 0.4,
         animationsOff = true,
@@ -353,9 +374,13 @@ val kGamePresets: List<GamePreset> = listOf(
     ),
     GamePreset(
         id = "cool",
-        title = "Serin",
-        subtitle = "30 FPS · %50 çözünürlük · serin güç profili · parlaklık kısık · animasyonlar kapalı · " +
-            "bildirimler sessiz · ısı koruması 40 °C. Root varsa işlemci hızı da sınırlanır.",
+        title = tr("Cool", "Serin"),
+        subtitle = tr(
+            "30 FPS · 50% resolution · cool power profile · dimmed brightness · animations off · " +
+                "notifications silenced · thermal guard 40 °C. With root, CPU speed is capped too.",
+            "30 FPS · %50 çözünürlük · serin güç profili · parlaklık kısık · animasyonlar kapalı · " +
+                "bildirimler sessiz · ısı koruması 40 °C. Root varsa işlemci hızı da sınırlanır.",
+        ),
         targetFps = 30,
         scale = 0.5,
         animationsOff = true,
@@ -369,9 +394,13 @@ val kGamePresets: List<GamePreset> = listOf(
     ),
     GamePreset(
         id = "balanced",
-        title = "Dengeli",
-        subtitle = "60 FPS · %60 çözünürlük · standart güç profili · animasyonlar kapalı · " +
-            "ısı koruması 42 °C. Daha akıcı, daha çok ısınır.",
+        title = tr("Balanced", "Dengeli"),
+        subtitle = tr(
+            "60 FPS · 60% resolution · standard power profile · animations off · " +
+                "thermal guard 42 °C. Smoother, but heats up more.",
+            "60 FPS · %60 çözünürlük · standart güç profili · animasyonlar kapalı · " +
+                "ısı koruması 42 °C. Daha akıcı, daha çok ısınır.",
+        ),
         targetFps = 60,
         scale = 0.6,
         animationsOff = true,
@@ -382,9 +411,13 @@ val kGamePresets: List<GamePreset> = listOf(
     ),
     GamePreset(
         id = "smooth",
-        title = "Akıcı",
-        subtitle = "60 FPS · %75 çözünürlük · performans profili · bildirimler sessiz · " +
-            "ısı koruması 44 °C. Telefon belirgin ısınır.",
+        title = tr("Smooth", "Akıcı"),
+        subtitle = tr(
+            "60 FPS · 75% resolution · performance profile · notifications silenced · " +
+                "thermal guard 44 °C. The phone gets noticeably hot.",
+            "60 FPS · %75 çözünürlük · performans profili · bildirimler sessiz · " +
+                "ısı koruması 44 °C. Telefon belirgin ısınır.",
+        ),
         targetFps = 60,
         scale = 0.75,
         animationsOff = true,
@@ -551,7 +584,7 @@ data class GameSession(
                 if (vs != null && policyName.matches(k) && digits.matches(vs)) cpu[k] = vs
             }
             return GameSession(
-                packageName = json.str("package") ?: error("paket yok"),
+                packageName = json.str("package") ?: error("missing package"),
                 settings = raw.mapValues { it.value as? String },
                 touchedGameManager = json.bool("touchedGameManager") ?: false,
                 sizeOverride = json.str("sizeOverride"),
@@ -642,7 +675,7 @@ fun buildApplySteps(
     val steps = ArrayList<GameStep>()
 
     if (config.killBackground) {
-        steps.add(GameStep("Arka plan temizliği", "am kill-all", optional = true))
+        steps.add(GameStep(tr("Background cleanup", "Arka plan temizliği"), "am kill-all", optional = true))
     }
 
     // Oyun-başına (Android GameManager) üst sınır + çözünürlük.
@@ -652,8 +685,12 @@ fun buildApplySteps(
     val mode = config.powerProfile.arg
     steps.add(
         GameStep(
-            "Oyun profili (${config.targetFps} FPS sınırı" +
-                (if (perGameScale) ", %${Math.round(config.scale * 100)} çözünürlük" else "") + ")",
+            tr(
+                "Game profile (${config.targetFps} FPS limit" +
+                    (if (perGameScale) ", ${Math.round(config.scale * 100)}% resolution" else "") + ")",
+                "Oyun profili (${config.targetFps} FPS sınırı" +
+                    (if (perGameScale) ", %${Math.round(config.scale * 100)} çözünürlük" else "") + ")",
+            ),
             "cmd game set --mode ${config.powerProfile.code} --fps ${config.targetFps}" +
                 (if (perGameScale) " --downscale ${downscaleArg(config.scale)}" else "") + " $pkg",
             optional = true,
@@ -661,17 +698,24 @@ fun buildApplySteps(
     )
     steps.add(
         GameStep(
-            "Güç profili: ${config.powerProfile.label}",
+            tr("Power profile: ${config.powerProfile.label}", "Güç profili: ${config.powerProfile.label}"),
             "cmd game mode $mode $pkg",
             optional = true,
         ),
     )
     buildBackendStep(config, angle)?.let { steps.add(it) }
     buildBedrockLiteCommand(pkg, config.bedrockViewDistance, restartGame)?.let {
-        steps.add(GameStep("Minecraft hafif grafik (görüş mesafesi ${config.bedrockViewDistance})", it, optional = true))
+        steps.add(GameStep(
+                tr(
+                    "Minecraft lite graphics (view distance ${config.bedrockViewDistance})",
+                    "Minecraft hafif grafik (görüş mesafesi ${config.bedrockViewDistance})",
+                ),
+                it,
+                optional = true,
+            ))
     }
     if (config.fixedPerf) {
-        steps.add(GameStep("Sabit performans modu", kFixedPerfOn, optional = true))
+        steps.add(GameStep(tr("Fixed performance mode", "Sabit performans modu"), kFixedPerfOn, optional = true))
     }
 
     val hz = config.lockHz
@@ -679,7 +723,7 @@ fun buildApplySteps(
         val v = "$hz.0"
         steps.add(
             GameStep(
-                "Ekranı $hz Hz'e kilitle",
+                tr("Lock screen to $hz Hz", "Ekranı $hz Hz'e kilitle"),
                 "settings put system peak_refresh_rate $v; " +
                     "settings put system min_refresh_rate $v; " +
                     "settings put system user_refresh_rate $hz; " +
@@ -691,7 +735,7 @@ fun buildApplySteps(
     if (config.animationsOff) {
         steps.add(
             GameStep(
-                "Sistem animasyonlarını kapat",
+                tr("Turn off system animations", "Sistem animasyonlarını kapat"),
                 kAnimationKeys.joinToString("; ") { "settings put ${it.namespace} ${it.key} 0" },
                 optional = true,
             ),
@@ -701,7 +745,7 @@ fun buildApplySteps(
         val dimmed = Math.round(brightness * (config.dimPercent / 100.0)).toInt().coerceIn(1, brightness)
         steps.add(
             GameStep(
-                "Ekran parlaklığını kıs",
+                tr("Dim screen brightness", "Ekran parlaklığını kıs"),
                 "settings put system screen_brightness_mode 0; settings put system screen_brightness $dimmed",
                 optional = true,
             ),
@@ -710,13 +754,13 @@ fun buildApplySteps(
     if (config.cpuCap && !cpuPolicies.isNullOrEmpty()) {
         val cmd = cpuCapCommand(topPolicies(cpuPolicies), config.cpuCapPercent / 100.0)
         if (cmd.isNotEmpty()) {
-            steps.add(GameStep("İşlemci hızını sınırla (%${config.cpuCapPercent})", cmd, optional = true))
+            steps.add(GameStep(tr("Cap CPU speed (${config.cpuCapPercent}%)", "İşlemci hızını sınırla (%${config.cpuCapPercent})"), cmd, optional = true))
         }
     }
     if (config.batterySaver) {
         steps.add(
             GameStep(
-                "Pil Tasarrufu'nu aç",
+                tr("Turn on Battery Saver", "Pil Tasarrufu'nu aç"),
                 "settings put ${kLowPowerKey.namespace} ${kLowPowerKey.key} 1",
                 optional = true,
             ),
@@ -725,7 +769,7 @@ fun buildApplySteps(
     if (config.dnd) {
         steps.add(
             GameStep(
-                "Bildirimleri sustur (Rahatsız Etme)",
+                tr("Silence notifications (Do Not Disturb)", "Bildirimleri sustur (Rahatsız Etme)"),
                 "settings put ${kZenKey.namespace} ${kZenKey.key} 1",
                 optional = true,
             ),
@@ -741,7 +785,7 @@ fun buildApplySteps(
         val density = scaledDensity(physicalDensity, config.scale)
         steps.add(
             GameStep(
-                "Ekran çözünürlüğü $size",
+                tr("Screen resolution $size", "Ekran çözünürlüğü $size"),
                 "wm size $size; wm density $density",
             ),
         )
@@ -749,7 +793,7 @@ fun buildApplySteps(
     if (restartGame && config.backend.settingValue != null && angle != null) {
         steps.add(
             GameStep(
-                "Oyunu kapat (grafik motoru yeniden yüklensin)",
+                tr("Close the game (reload graphics engine)", "Oyunu kapat (grafik motoru yeniden yüklensin)"),
                 "am force-stop $pkg",
                 optional = true,
             ),
@@ -789,56 +833,56 @@ fun buildRevertSteps(session: GameSession): List<GameStep> {
         } else {
             "wm density reset"
         }
-        steps.add(GameStep("Ekran çözünürlüğünü geri al", "$sizeCmd; $densityCmd"))
+        steps.add(GameStep(tr("Revert screen resolution", "Ekran çözünürlüğünü geri al"), "$sizeCmd; $densityCmd"))
     }
 
     val refresh = restoreCommands(session, kRefreshKeys)
     if (refresh.isNotEmpty()) {
-        steps.add(GameStep("Ekran yenileme ayarlarını geri al", refresh.joinToString("; ")))
+        steps.add(GameStep(tr("Revert refresh rate settings", "Ekran yenileme ayarlarını geri al"), refresh.joinToString("; ")))
     }
     val anim = kAnimationKeys
         .filter { session.settings.containsKey(it.id) }
         .map { "settings put ${it.namespace} ${it.key} ${healAnimationValue(session.settings[it.id])}" }
     if (anim.isNotEmpty()) {
-        steps.add(GameStep("Animasyon ayarlarını geri al", anim.joinToString("; ")))
+        steps.add(GameStep(tr("Revert animation settings", "Animasyon ayarlarını geri al"), anim.joinToString("; ")))
     }
     val bright = restoreCommands(session, kBrightnessKeys)
     if (bright.isNotEmpty()) {
-        steps.add(GameStep("Ekran parlaklığını geri al", bright.joinToString("; ")))
+        steps.add(GameStep(tr("Revert screen brightness", "Ekran parlaklığını geri al"), bright.joinToString("; ")))
     }
     val cpu = session.cpuMax.entries
         .filter { policyName.matches(it.key) && digits.matches(it.value) }
         .map { cpuWrite(it.key, it.value.toInt()) }
     if (cpu.isNotEmpty()) {
-        steps.add(GameStep("İşlemci sınırını geri al", cpu.joinToString("; "), optional = true))
+        steps.add(GameStep(tr("Revert CPU limit", "İşlemci sınırını geri al"), cpu.joinToString("; "), optional = true))
     }
     val lowPower = restoreCommands(session, listOf(kLowPowerKey))
     if (lowPower.isNotEmpty()) {
-        steps.add(GameStep("Pil Tasarrufu ayarını geri al", lowPower.joinToString("; "), optional = true))
+        steps.add(GameStep(tr("Revert Battery Saver setting", "Pil Tasarrufu ayarını geri al"), lowPower.joinToString("; "), optional = true))
     }
     val angleRestore = restoreListCommands(session, kAngleKeys)
     if (angleRestore.isNotEmpty()) {
-        steps.add(GameStep("Grafik motoru ayarını geri al", angleRestore.joinToString("; ")))
+        steps.add(GameStep(tr("Revert graphics engine setting", "Grafik motoru ayarını geri al"), angleRestore.joinToString("; ")))
     }
     if (session.fixedPerf) {
-        steps.add(GameStep("Sabit performans modunu kapat", kFixedPerfOff, optional = true))
+        steps.add(GameStep(tr("Turn off fixed performance mode", "Sabit performans modunu kapat"), kFixedPerfOff, optional = true))
     }
     val zen = restoreCommands(session, listOf(kZenKey))
     if (zen.isNotEmpty()) {
-        steps.add(GameStep("Rahatsız Etme ayarını geri al", zen.joinToString("; ")))
+        steps.add(GameStep(tr("Revert Do Not Disturb setting", "Rahatsız Etme ayarını geri al"), zen.joinToString("; ")))
     }
 
     if (session.touchedGameManager && isSafePackage(session.packageName)) {
         steps.add(
             GameStep(
-                "Oyun profilini sıfırla",
+                tr("Reset game profile", "Oyun profilini sıfırla"),
                 "cmd game reset ${session.packageName}; cmd game mode standard ${session.packageName}",
                 optional = true,
             ),
         )
     }
     buildBedrockRestoreCommand(session.packageName)?.let {
-        steps.add(GameStep("Minecraft grafik ayarlarını geri al", it, optional = true))
+        steps.add(GameStep(tr("Revert Minecraft graphics settings", "Minecraft grafik ayarlarını geri al"), it, optional = true))
     }
     return steps
 }
@@ -906,23 +950,23 @@ fun buildSafeResetSteps(packageName: String?): List<GameStep> {
     val steps = ArrayList<GameStep>()
     steps.add(
         GameStep(
-            "Animasyonları varsayılana döndür",
+            tr("Restore animations to default", "Animasyonları varsayılana döndür"),
             kAnimationKeys.joinToString("; ") { "settings put ${it.namespace} ${it.key} $kAnimationDefault" },
             optional = true,
         ),
     )
     steps.add(
         GameStep(
-            "Ekran yenileme kilidini kaldır",
+            tr("Remove refresh rate lock", "Ekran yenileme kilidini kaldır"),
             kRefreshKeys.joinToString("; ") { "settings delete ${it.namespace} ${it.key}" },
             optional = true,
         ),
     )
-    steps.add(GameStep("Sabit performans modunu kapat", kFixedPerfOff, optional = true))
-    steps.add(GameStep("Ekran çözünürlüğünü sıfırla", "wm size reset; wm density reset", optional = true))
+    steps.add(GameStep(tr("Turn off fixed performance mode", "Sabit performans modunu kapat"), kFixedPerfOff, optional = true))
+    steps.add(GameStep(tr("Reset screen resolution", "Ekran çözünürlüğünü sıfırla"), "wm size reset; wm density reset", optional = true))
     steps.add(
         GameStep(
-            "İşlemci hız sınırını kaldır (root)",
+            tr("Remove CPU speed limit (root)", "İşlemci hız sınırını kaldır (root)"),
             "for p in /sys/devices/system/cpu/cpufreq/policy*; do " +
                 "cat \$p/cpuinfo_max_freq > \$p/scaling_max_freq; done",
             optional = true,
@@ -931,7 +975,7 @@ fun buildSafeResetSteps(packageName: String?): List<GameStep> {
     if (packageName != null && isSafePackage(packageName)) {
         steps.add(
             GameStep(
-                "Oyun profilini sıfırla",
+                tr("Reset game profile", "Oyun profilini sıfırla"),
                 "cmd game reset $packageName; cmd game mode standard $packageName",
                 optional = true,
             ),

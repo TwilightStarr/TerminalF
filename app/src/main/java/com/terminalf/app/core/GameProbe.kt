@@ -88,11 +88,11 @@ fun parseThermalStatus(output: String): Int? =
 
 /** Isıl durum sayısının okunabilir adı. */
 fun thermalLabel(status: Int): String = when {
-    status <= 0 -> "Normal"
-    status == 1 -> "Hafif"
-    status == 2 -> "Orta"
-    status == 3 -> "Ciddi"
-    else -> "Kritik"
+    status <= 0 -> tr("Normal", "Normal")
+    status == 1 -> tr("Light", "Hafif")
+    status == 2 -> tr("Moderate", "Orta")
+    status == 3 -> tr("Severe", "Ciddi")
+    else -> tr("Critical", "Kritik")
 }
 
 /** İzleyicinin günlüğündeki tek örnek. */
@@ -198,16 +198,21 @@ fun diagnose(stats: SessionStats, targetFps: Int): Diagnosis {
     if (fps == null) {
         return Diagnosis(
             DiagnosisKind.Unknown,
-            "FPS ölçülemedi",
-            "Bu cihazda oyunun kare zamanları okunamadı. Isı ve işlemci bilgisi yine de " +
-                "kaydedildiyse aşağıda görünür.",
+            tr("FPS could not be measured", "FPS ölçülemedi"),
+            tr(
+                "The game's frame times could not be read on this device. Heat and CPU data still appear below if they were recorded.",
+                "Bu cihazda oyunun kare zamanları okunamadı. Isı ve işlemci bilgisi yine de kaydedildiyse aşağıda görünür.",
+            ),
         )
     }
     if (fps >= targetFps * 0.9) {
         return Diagnosis(
             DiagnosisKind.OnTarget,
-            "Hedefe ulaşıldı",
-            "Ortalama ${Math.round(fps)} FPS ile hedef $targetFps FPS'e yakınsınız.",
+            tr("Target reached", "Hedefe ulaşıldı"),
+            tr(
+                "At an average of ${Math.round(fps)} FPS you are close to the $targetFps FPS target.",
+                "Ortalama ${Math.round(fps)} FPS ile hedef $targetFps FPS'e yakınsınız.",
+            ),
         )
     }
     val thermal = stats.maxThermal
@@ -215,31 +220,39 @@ fun diagnose(stats: SessionStats, targetFps: Int): Diagnosis {
     if (thermal != null && thermal >= 2) {
         return Diagnosis(
             DiagnosisKind.Thermal,
-            "Isıl kısıtlama olası",
-            "Telefon ısındığı için sistem işlemci/GPU hızını kısıyor olabilir. 30 FPS ve %50 " +
-                "çözünürlük ayarını deneyin, şarj etmeden oynayın, kılıfı çıkarın ya da kısa mola verin.",
+            tr("Thermal throttling likely", "Isıl kısıtlama olası"),
+            tr(
+                "The system may be throttling the CPU/GPU because the phone is hot. Try 30 FPS and 50% resolution, play without charging, take the case off or take a short break.",
+                "Telefon ısındığı için sistem işlemci/GPU hızını kısıyor olabilir. 30 FPS ve %50 çözünürlük ayarını deneyin, şarj etmeden oynayın, kılıfı çıkarın ya da kısa mola verin.",
+            ),
         )
     }
     if (ratio != null && ratio >= 0.8) {
         return Diagnosis(
             DiagnosisKind.CpuBound,
-            "İşlemci sınırlı (olası)",
-            "Büyük çekirdek neredeyse tam hızda: yavaşlama oyunun kendi hesabından (çok sayıda " +
-                "birim, dev sayılar) geliyor. Çözünürlük düşürmek ısıyı ve pili azaltır ama FPS'i " +
-                "çok artırmaz. Oyun içinde hızlandırma/otomatik savaşı kapatmak daha etkilidir.",
+            tr("CPU-bound (likely)", "İşlemci sınırlı (olası)"),
+            tr(
+                "The big core is running at almost full speed: the slowdown comes from the game's own calculations (many units, huge numbers). Lowering the resolution cuts heat and battery use but does not raise FPS much. Turning off speed-up / auto-battle in the game is more effective.",
+                "Büyük çekirdek neredeyse tam hızda: yavaşlama oyunun kendi hesabından (çok sayıda birim, dev sayılar) geliyor. Çözünürlük düşürmek ısıyı ve pili azaltır ama FPS'i çok artırmaz. Oyun içinde hızlandırma/otomatik savaşı kapatmak daha etkilidir.",
+            ),
         )
     }
     if (ratio != null && ratio < 0.6) {
         return Diagnosis(
             DiagnosisKind.GpuBound,
-            "GPU ya da bekleme sınırlı (olası)",
-            "İşlemci tam hızda çalışmıyor; darboğaz çizimde olabilir. Çözünürlüğü %50'ye " +
-                "düşürmek işe yarar.",
+            tr("GPU- or wait-bound (likely)", "GPU ya da bekleme sınırlı (olası)"),
+            tr(
+                "The CPU is not running at full speed; the bottleneck may be rendering. Lowering the resolution to 50% helps.",
+                "İşlemci tam hızda çalışmıyor; darboğaz çizimde olabilir. Çözünürlüğü %50'ye düşürmek işe yarar.",
+            ),
         )
     }
     return Diagnosis(
         DiagnosisKind.Unknown,
-        "Net bir darboğaz görünmüyor",
-        "Veriler kesin bir sonuç vermiyor. Daha uzun bir oturumdan sonra tekrar bakın.",
+        tr("No clear bottleneck", "Net bir darboğaz görünmüyor"),
+        tr(
+            "The data is inconclusive. Check again after a longer session.",
+            "Veriler kesin bir sonuç vermiyor. Daha uzun bir oturumdan sonra tekrar bakın.",
+        ),
     )
 }

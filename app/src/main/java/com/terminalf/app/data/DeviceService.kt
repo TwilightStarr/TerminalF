@@ -1,5 +1,6 @@
 package com.terminalf.app.data
 
+import com.terminalf.app.core.tr
 import android.os.Build
 import java.util.Locale
 
@@ -12,7 +13,8 @@ data class DeviceStaticInfo(
     val locale: String,
 ) {
     companion object {
-        val Unknown = DeviceStaticInfo("Bilinmiyor", "Bilinmiyor", "Bilinmiyor", 0, "Bilinmiyor")
+        val Unknown: DeviceStaticInfo
+            get() = tr("Unknown", "Bilinmiyor").let { DeviceStaticInfo(it, it, it, 0, it) }
     }
 }
 
@@ -22,13 +24,14 @@ data class DeviceStaticInfo(
  */
 class DeviceService {
     fun read(): DeviceStaticInfo {
-        var model = "Bilinmiyor"
-        var os = "Bilinmiyor"
-        var cpuArch = "Bilinmiyor"
+        val unknown = tr("Unknown", "Bilinmiyor")
+        var model = unknown
+        var os = unknown
+        var cpuArch = unknown
         try {
             model = "${Build.MANUFACTURER} ${Build.MODEL}"
             os = "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
-            cpuArch = Build.SUPPORTED_ABIS.firstOrNull() ?: "Bilinmiyor"
+            cpuArch = Build.SUPPORTED_ABIS.firstOrNull() ?: unknown
         } catch (_: Exception) {
             // Okuma başarısız olursa varsayılan "Bilinmiyor" değerleriyle devam et.
         }

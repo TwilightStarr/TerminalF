@@ -27,7 +27,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.terminalf.app.core.AppLanguage
 import com.terminalf.app.core.fixed
+import com.terminalf.app.core.tr
+import com.terminalf.app.state.Haptics
 import com.terminalf.app.state.AppSettings
 import com.terminalf.app.state.Notifier
 import com.terminalf.app.ui.components.AppCard
@@ -58,10 +61,23 @@ fun SettingsPage(settings: AppSettings, notifier: Notifier, onBack: () -> Unit) 
     suspend fun requestPermission() {
         val ok = notifier.requestPermission()
         permitted = ok
-        if (!ok) toast.show("İzin verilmedi. Sistem ayarlarından açabilirsiniz.")
+        if (!ok) toast.show(tr("Permission denied. You can enable it in system settings.", "İzin verilmedi. Sistem ayarlarından açabilirsiniz."))
     }
 
-    SubPageFrame(title = "Bildirimler ve Uyarılar", onBack = onBack) {
+    SubPageFrame(title = tr("Notifications & Alerts", "Bildirimler ve Uyarılar"), onBack = onBack) {
+        SectionHeader(tr("Language", "Dil"))
+        AppCard {
+            Text(tr("Interface language", "Arayüz dili"), fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(2.dp))
+            Text(tr("The app language changes instantly.", "Uygulamanın dili anında değişir."), color = c.muted, fontSize = 12.5.sp)
+            Spacer(Modifier.height(12.dp))
+            GameChoices(
+                values = AppLanguage.entries.toList(),
+                selected = s.language,
+                label = { it.nativeName },
+                onSelected = { Haptics.tap(); s.setLanguage(it) },
+            )
+        }
         AppCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -71,37 +87,37 @@ fun SettingsPage(settings: AppSettings, notifier: Notifier, onBack: () -> Unit) 
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Bildirim izni", fontWeight = FontWeight.Bold)
+                    Text(tr("Notification permission", "Bildirim izni"), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        if (permitted) "Verildi" else "Verilmedi: bildirim gönderilemez",
+                        if (permitted) tr("Granted", "Verildi") else tr("Not granted: notifications cannot be sent", "Verilmedi: bildirim gönderilemez"),
                         color = if (permitted) c.good else c.warn,
                         fontSize = 13.sp,
                     )
                 }
                 if (!permitted) {
-                    SoftButton(label = "İzin Ver", onClick = { scope.launch { requestPermission() } })
+                    SoftButton(label = tr("Allow", "İzin Ver"), onClick = { scope.launch { requestPermission() } })
                 }
             }
         }
-        SectionHeader("Bildirimler")
+        SectionHeader(tr("Notifications", "Bildirimler"))
         AppCard {
             SwitchRow(
-                title = "İşlem sonuçları",
-                subtitle = "Optimizasyon bitince, uygulama arka plandaysa bildir.",
+                title = tr("Task results", "İşlem sonuçları"),
+                subtitle = tr("Notify when an optimization finishes while the app is in the background.", "Optimizasyon bitince, uygulama arka plandaysa bildir."),
                 value = s.taskNotifications,
                 onChanged = { s.setTaskNotifications(it) },
             )
             RowDivider()
             SwitchRow(
-                title = "Sağlık uyarıları",
-                subtitle = "Isınma, düşük pil, dolu depolama ve bellek. Uygulama çalışırken izlenir.",
+                title = tr("Health alerts", "Sağlık uyarıları"),
+                subtitle = tr("Overheating, low battery, full storage and memory. Monitored while the app is running.", "Isınma, düşük pil, dolu depolama ve bellek. Uygulama çalışırken izlenir."),
                 value = s.healthAlerts,
                 onChanged = { s.setHealthAlerts(it) },
             )
             Spacer(Modifier.height(12.dp))
             SoftButton(
-                label = "Test Bildirimi Gönder",
+                label = tr("Send Test Notification", "Test Bildirimi Gönder"),
                 icon = Icons.AutoMirrored.Rounded.Send,
                 onClick = {
                     scope.launch {
@@ -110,16 +126,16 @@ fun SettingsPage(settings: AppSettings, notifier: Notifier, onBack: () -> Unit) 
                             if (!permitted) return@launch
                         }
                         notifier.showTest()
-                        toast.show("Test bildirimi gönderildi")
+                        toast.show(tr("Test notification sent", "Test bildirimi gönderildi"))
                     }
                 },
             )
         }
-        SectionHeader("Uyarı Eşikleri")
+        SectionHeader(tr("Alert Thresholds", "Uyarı Eşikleri"))
         AppCard {
             SliderRow(
-                title = "Sıcaklık",
-                valueLabel = "${fixed(s.temperatureC, 0)} °C ve üstü",
+                title = tr("Temperature", "Sıcaklık"),
+                valueLabel = tr("${fixed(s.temperatureC, 0)} °C and above", "${fixed(s.temperatureC, 0)} °C ve üstü"),
                 value = s.temperatureC.toFloat(),
                 min = 35f,
                 max = 50f,
@@ -128,8 +144,8 @@ fun SettingsPage(settings: AppSettings, notifier: Notifier, onBack: () -> Unit) 
                 onChanged = { s.setTemperature(it.toDouble()) },
             )
             SliderRow(
-                title = "Depolama doluluğu",
-                valueLabel = "%${s.storagePercent} ve üstü",
+                title = tr("Storage used", "Depolama doluluğu"),
+                valueLabel = tr("${s.storagePercent}% and above", "%${s.storagePercent} ve üstü"),
                 value = s.storagePercent.toFloat(),
                 min = 70f,
                 max = 98f,
@@ -138,8 +154,8 @@ fun SettingsPage(settings: AppSettings, notifier: Notifier, onBack: () -> Unit) 
                 onChanged = { s.setStoragePercent(it.roundToInt()) },
             )
             SliderRow(
-                title = "Düşük pil",
-                valueLabel = "%${s.batteryPercent} ve altı",
+                title = tr("Low battery", "Düşük pil"),
+                valueLabel = tr("${s.batteryPercent}% and below", "%${s.batteryPercent} ve altı"),
                 value = s.batteryPercent.toFloat(),
                 min = 5f,
                 max = 30f,
@@ -148,8 +164,8 @@ fun SettingsPage(settings: AppSettings, notifier: Notifier, onBack: () -> Unit) 
                 onChanged = { s.setBatteryPercent(it.roundToInt()) },
             )
             SliderRow(
-                title = "Bellek (RAM) doluluğu",
-                valueLabel = "%${s.memoryPercent} ve üstü",
+                title = tr("Memory (RAM) used", "Bellek (RAM) doluluğu"),
+                valueLabel = tr("${s.memoryPercent}% and above", "%${s.memoryPercent} ve üstü"),
                 value = s.memoryPercent.toFloat(),
                 min = 80f,
                 max = 98f,
@@ -158,11 +174,11 @@ fun SettingsPage(settings: AppSettings, notifier: Notifier, onBack: () -> Unit) 
                 onChanged = { s.setMemoryPercent(it.roundToInt()) },
             )
         }
-        SectionHeader("Geri Bildirim")
+        SectionHeader(tr("Feedback", "Geri Bildirim"))
         AppCard {
             SwitchRow(
-                title = "Dokunsal geri bildirim",
-                subtitle = "Sekme geçişi ve işlem sonuçlarında hafif titreşim.",
+                title = tr("Haptic feedback", "Dokunsal geri bildirim"),
+                subtitle = tr("A light vibration on tab changes and task results.", "Sekme geçişi ve işlem sonuçlarında hafif titreşim."),
                 value = s.haptics,
                 onChanged = { s.setHaptics(it) },
             )

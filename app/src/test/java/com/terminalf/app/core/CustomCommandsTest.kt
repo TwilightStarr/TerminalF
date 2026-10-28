@@ -5,6 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CustomCommandsTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun blankAndCommentLinesAreSkipped() {
         val lines = customLines("  settings put global a 1  \n\n# not\r\nam kill-all\n")
         assertEquals(listOf("settings put global a 1", "am kill-all"), lines)

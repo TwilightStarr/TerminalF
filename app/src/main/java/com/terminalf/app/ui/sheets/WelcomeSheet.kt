@@ -1,5 +1,10 @@
 package com.terminalf.app.ui.sheets
 
+import com.terminalf.app.LocalContainer
+import com.terminalf.app.core.AppLanguage
+import com.terminalf.app.core.tr
+import com.terminalf.app.ui.observe
+import com.terminalf.app.ui.pages.GameChoices
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -58,6 +63,8 @@ private fun WelcomeBody(notifier: Notifier, onDone: () -> Unit) {
     val c = AppTheme.colors
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
+    val settings = LocalContainer.current.settings
+    val language = settings.observe().language
 
     fun start(askPermission: Boolean) {
         scope.launch {
@@ -87,36 +94,45 @@ private fun WelcomeBody(notifier: Notifier, onDone: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(
-                "TerminalF'e hoş geldiniz",
+                tr("Welcome to TerminalF", "TerminalF'e hoş geldiniz"),
                 color = c.text,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
         }
+        Spacer(Modifier.height(14.dp))
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            GameChoices(
+                values = AppLanguage.entries.toList(),
+                selected = language,
+                label = { it.nativeName },
+                onSelected = { settings.setLanguage(it) },
+            )
+        }
         Spacer(Modifier.height(20.dp))
         WelcomePoint(
             icon = Icons.Rounded.MonitorHeart,
-            title = "Gerçek ölçümler",
-            text = "RAM, depolama, pil ve sıcaklık doğrudan cihazdan okunur.",
+            title = tr("Real measurements", "Gerçek ölçümler"),
+            text = tr("RAM, storage, battery and temperature are read straight from the device.", "RAM, depolama, pil ve sıcaklık doğrudan cihazdan okunur."),
         )
         WelcomePoint(
             icon = Icons.Rounded.Bolt,
-            title = "Tek dokunuşla optimizasyon",
-            text = "Hazır profiller ve akıllı öneriler karmaşık ayarları sizin yerinize halleder.",
+            title = tr("One-tap optimization", "Tek dokunuşla optimizasyon"),
+            text = tr("Ready-made profiles and smart suggestions handle the complicated settings for you.", "Hazır profiller ve akıllı öneriler karmaşık ayarları sizin yerinize halleder."),
         )
         WelcomePoint(
             icon = Icons.Rounded.NotificationsActive,
-            title = "Haberdar olun",
-            text = "İşlem bitince ya da telefon ısınınca, pil azalınca, depolama dolunca bildirim alın.",
+            title = tr("Stay informed", "Haberdar olun"),
+            text = tr("Get notified when a task finishes, the phone heats up, the battery runs low or storage fills up.", "İşlem bitince ya da telefon ısınınca, pil azalınca, depolama dolunca bildirim alın."),
         )
         WelcomePoint(
             icon = Icons.Rounded.Lock,
-            title = "Verileriniz cihazda kalır",
-            text = "Hiçbir veri dışarı gönderilmez. Bildirimleri istediğiniz zaman Cihaz > Bildirimler ve Uyarılar bölümünden kapatabilirsiniz.",
+            title = tr("Your data stays on your device", "Verileriniz cihazda kalır"),
+            text = tr("No data is sent anywhere. You can turn notifications off at any time under Device > Notifications & Alerts.", "Hiçbir veri dışarı gönderilmez. Bildirimleri istediğiniz zaman Cihaz > Bildirimler ve Uyarılar bölümünden kapatabilirsiniz."),
         )
         Spacer(Modifier.height(18.dp))
         PrimaryButton(
-            label = "Bildirimlere İzin Ver ve Başla",
+            label = tr("Allow Notifications & Start", "Bildirimlere İzin Ver ve Başla"),
             icon = Icons.Rounded.Notifications,
             busy = busy,
             onClick = { start(askPermission = true) },
@@ -127,7 +143,7 @@ private fun WelcomeBody(notifier: Notifier, onDone: () -> Unit) {
                 onClick = { start(askPermission = false) },
                 enabled = !busy,
             ) {
-                Text("Şimdilik geç", color = c.muted)
+                Text(tr("Skip for now", "Şimdilik geç"), color = c.muted)
             }
         }
     }

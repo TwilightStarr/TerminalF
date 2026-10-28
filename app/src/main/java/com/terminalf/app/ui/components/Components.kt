@@ -1,5 +1,6 @@
 package com.terminalf.app.ui.components
 
+import com.terminalf.app.core.tr
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -37,7 +38,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -49,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.terminalf.app.core.luminanceOf
 import com.terminalf.app.state.Motion
 import com.terminalf.app.ui.theme.AppTheme
 import com.terminalf.app.ui.theme.faded
@@ -117,7 +121,36 @@ fun MeterBar(value: Double, modifier: Modifier = Modifier, color: Color? = null,
     }
 }
 
-/** Üstte etiket, ortada büyük değer, altta ilerleme çubuğu: kısa gösterge. */
+/** Renkli, yumuşak zeminli yuvarlak-kare simge kutusu: ana ekranda her öğe kendi rengini taşır. */
+@Composable
+fun IconChip(
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 38.dp,
+    busy: Boolean = false,
+) {
+    val shape = RoundedCornerShape(size * 0.32f)
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .background(color.faded(0.16f), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (busy) {
+            CircularProgressIndicator(modifier = Modifier.size(size * 0.48f), strokeWidth = 2.4.dp, color = color)
+        } else {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(size * 0.55f))
+        }
+    }
+}
+
+/** [bg] zemini üzerinde okunur yazı/simge rengi (açık zemine koyu, koyu zemine beyaz). */
+fun onColorFor(bg: Color): Color =
+    if (luminanceOf(bg.toArgb().toLong() and 0xFFFFFFFFL) > 0.30) Color(0xFF07070A) else Color(0xFFFFFFFF)
+
+/** Üstte renkli simge + etiket, ortada büyük değer, altta ilerleme çubuğu: kısa gösterge. */
 @Composable
 fun StatTile(
     icon: ImageVector,
@@ -132,12 +165,12 @@ fun StatTile(
     val tint = color ?: c.primary
     AppCard(modifier = modifier, padding = PaddingValues(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
+            IconChip(icon = icon, color = tint, size = 30.dp)
+            Spacer(Modifier.width(8.dp))
             Text(label, color = c.muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Spacer(Modifier.height(8.dp))
-        Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(10.dp))
+        Text(value, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (caption != null) {
             Spacer(Modifier.height(2.dp))
             Text(caption, color = c.muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -165,7 +198,7 @@ fun InfoRow(
     if (copyable) {
         m = m.clickable {
             clipboard.setText(AnnotatedString(value))
-            toast.show("Panoya kopyalandı")
+            toast.show(tr("Copied to clipboard", "Panoya kopyalandı"))
         }
     }
     Row(modifier = m.padding(vertical = 9.dp), verticalAlignment = Alignment.Top) {
@@ -187,7 +220,10 @@ fun RowDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(modifier = modifier, thickness = 1.dp, color = AppTheme.colors.outline)
 }
 
-/** Ana eylem düğmesi (marka gradyanı). */
+/**
+ * Ana eylem düğmesi. [color] verilirse o renkten yumuşak bir gradyan, verilmezse marka gradyanı
+ * (vurgu -> ikincil) kullanılır. Yazı rengi zemine göre otomatik seçilir.
+ */
 @Composable
 fun PrimaryButton(
     label: String,
@@ -196,31 +232,34 @@ fun PrimaryButton(
     icon: ImageVector? = null,
     busy: Boolean = false,
     expanded: Boolean = true,
+    color: Color? = null,
 ) {
     val c = AppTheme.colors
     val enabled = onClick != null && !busy
     val shape = RoundedCornerShape(16.dp)
+    val brush: Brush = if (color == null) c.brand else Brush.linearGradient(listOf(color, color.copy(alpha = 0.78f)))
+    val onBg = if (color == null) c.onBrand else onColorFor(color)
     var m = modifier.alpha(if (enabled) 1f else 0.5f)
     if (expanded) m = m.fillMaxWidth()
     Box(
         modifier = m
             .height(50.dp)
             .clip(shape)
-            .background(c.brand, shape)
+            .background(brush, shape)
             .clickable(enabled = enabled) { onClick?.invoke() }
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (busy) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.4.dp, color = c.bg)
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.4.dp, color = onBg)
             } else if (icon != null) {
-                Icon(icon, contentDescription = null, tint = c.bg, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = null, tint = onBg, modifier = Modifier.size(20.dp))
             }
             if (busy || icon != null) Spacer(Modifier.width(8.dp))
             Text(
                 label,
-                color = c.bg,
+                color = onBg,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
@@ -247,8 +286,8 @@ fun SoftButton(
             .alpha(if (onClick != null) 1f else 0.5f)
             .height(44.dp)
             .clip(shape)
-            .background(c.surfaceHigh, shape)
-            .border(1.dp, c.outline, shape)
+            .background(if (color != null) color.faded(0.12f) else c.surfaceHigh, shape)
+            .border(1.dp, if (color != null) color.faded(0.35f) else c.outline, shape)
             .clickable(enabled = onClick != null) { onClick?.invoke() }
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,

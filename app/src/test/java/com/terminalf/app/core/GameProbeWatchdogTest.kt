@@ -16,6 +16,8 @@ private fun session(pkg: String = DEFAULT_GAME_PACKAGE) = GameSession(
 )
 
 class GameWatchdogTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun scriptFilled() {
         val script = buildWatchdogScript(session())
         assertTrue(script.contains(kWatchdogTag))
@@ -125,6 +127,8 @@ private fun latency(frames: Int = 11, stepNs: Long = 100_000_000L): String {
 }
 
 class GameProbeTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun focusedPackage() {
         val out = "  mCurrentFocus=Window{4f3a1b2 u0 com.playdigious.ninekings/com.unity3d.player.UnityPlayerActivity}"
         assertEquals("com.playdigious.ninekings", parseFocusedPackage(out))

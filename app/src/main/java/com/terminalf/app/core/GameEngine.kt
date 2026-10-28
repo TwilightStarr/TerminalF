@@ -14,33 +14,37 @@ package com.terminalf.app.core
 /** Oyunun kullanacağı grafik sürücüsü arka ucu. */
 enum class GraphicsBackend(
     val json: String,
-    val label: String,
     /** `angle_gl_driver_selection_values` içine yazılan değer; `null` = hiçbir şey yazılmaz. */
     val settingValue: String?,
-    val hint: String,
 ) {
-    Default(
-        "default",
-        "Sistem varsayılanı",
-        null,
-        "Grafik sürücüsüne dokunulmaz; oyun cihazın kendi seçtiği yolu kullanır.",
-    ),
-    Native(
-        "native",
-        "Yerel GLES",
-        "native",
-        "Oyunu cihazın yerel OpenGL ES sürücüsüne zorlar. Sistem tüm uygulamaları ANGLE'a " +
-            "yönlendiriyorsa ve bu oyunda takılma varsa işe yarar.",
-    ),
-    Angle(
-        "angle",
-        "ANGLE (Vulkan)",
-        "angle",
-        "OpenGL ES çağrılarını Vulkan üzerinden çalıştırır. Bazı GPU'larda sürücü yükünü ve " +
-            "takılmayı azaltıp FPS'i artırır, bazılarında düşürür; Son oyun oturumundan ölçerek " +
-            "karşılaştırın. Cihaz ANGLE desteği bildirmiyorsa etkisiz kalır.",
-    ),
+    Default("default", null),
+    Native("native", "native"),
+    Angle("angle", "angle"),
     ;
+
+    /** Name shown in the UI (follows the active language). */
+    val label: String
+        get() = when (this) {
+            Default -> tr("System default", "Sistem varsayılanı")
+            Native -> tr("Native GLES", "Yerel GLES")
+            Angle -> "ANGLE (Vulkan)"
+        }
+
+    val hint: String
+        get() = when (this) {
+            Default -> tr(
+                "The graphics driver is left alone; the game uses the path the device chooses.",
+                "Grafik sürücüsüne dokunulmaz; oyun cihazın kendi seçtiği yolu kullanır.",
+            )
+            Native -> tr(
+                "Forces the game onto the device's native OpenGL ES driver. Helps if the system routes all apps to ANGLE and this game stutters.",
+                "Oyunu cihazın yerel OpenGL ES sürücüsüne zorlar. Sistem tüm uygulamaları ANGLE'a yönlendiriyorsa ve bu oyunda takılma varsa işe yarar.",
+            )
+            Angle -> tr(
+                "Runs OpenGL ES calls on top of Vulkan. On some GPUs it reduces driver overhead and stutter and raises FPS, on others it lowers it; measure with Last session and compare. Has no effect if the device does not report ANGLE support.",
+                "OpenGL ES çağrılarını Vulkan üzerinden çalıştırır. Bazı GPU'larda sürücü yükünü ve takılmayı azaltıp FPS'i artırır, bazılarında düşürür; Son oyun oturumundan ölçerek karşılaştırın. Cihaz ANGLE desteği bildirmiyorsa etkisiz kalır.",
+            )
+        }
 
     companion object {
         fun fromJson(value: Any?): GraphicsBackend =
@@ -132,7 +136,7 @@ fun buildBackendStep(config: GameModeConfig, current: AngleSelection?): GameStep
     if (current == null || !isSafePackage(config.packageName)) return null
     val m = mergeAngleSelection(current, config.packageName, value)
     return GameStep(
-        "Grafik motoru: ${config.backend.label}",
+        tr("Graphics engine: ${config.backend.label}", "Grafik motoru: ${config.backend.label}"),
         "settings put ${kAngleKeys[0].namespace} ${kAngleKeys[0].key} ${m.pkgs}; " +
             "settings put ${kAngleKeys[1].namespace} ${kAngleKeys[1].key} ${m.values}",
         optional = true,
@@ -162,10 +166,17 @@ const val kFixedPerfOn = "cmd power set-fixed-performance-mode-enabled true"
 const val kFixedPerfOff = "cmd power set-fixed-performance-mode-enabled false"
 
 /** Oyun türü: yalnızca ipucu ve önerilen ayar seçmek için kullanılır. */
-enum class GameKind(val title: String) {
-    Generic("Genel"),
-    MinecraftBedrock("Minecraft (Bedrock)"),
-    MinecraftJava("Minecraft (Java başlatıcı)"),
+enum class GameKind {
+    Generic,
+    MinecraftBedrock,
+    MinecraftJava;
+
+    val title: String
+        get() = when (this) {
+            Generic -> tr("General", "Genel")
+            MinecraftBedrock -> "Minecraft (Bedrock)"
+            MinecraftJava -> tr("Minecraft (Java launcher)", "Minecraft (Java başlatıcı)")
+        }
 }
 
 private val javaLaunchers = setOf(
@@ -185,24 +196,40 @@ fun detectGameKind(packageName: String): GameKind = when {
 /** Türe özel, oyun İÇİ ayar ipuçları (bu uygulama oyunun kendi ayarlarını değiştiremez). */
 fun gameTips(kind: GameKind): List<String> = when (kind) {
     GameKind.MinecraftBedrock -> listOf(
-        "En büyük FPS kazancı oyun içinden gelir: Ayarlar > Video'da görüş mesafesini 6-10'a, " +
-            "simülasyon mesafesini 4-6'ya indirin.",
-        "Güzel grafikler, güzel gökyüzü, yumuşak aydınlatma ve parçacıkları kapatmak GPU yükünü " +
-            "belirgin azaltır.",
-        "Oyun Modu çözünürlüğü %75 civarında blok dokularda genelde fark edilmez; arayüz biraz " +
-            "yumuşar.",
-        "Bedrock Android'de oyunun kendisi 60 FPS'e sınırlı; 90 hedeflemek FPS'i artırmaz, yalnızca " +
-            "ısıtır. Akıcılık için kare süresini düzgün tutmaya bakın.",
-        "ANGLE (Vulkan) motorunu isterseniz deneyip Son oyun oturumundaki ortalama FPS ve ısıyı " +
-            "varsayılanla karşılaştırın; hangisi daha iyiyse onu bırakın.",
+        tr(
+            "The biggest FPS gain comes from inside the game: in Settings > Video lower the render distance to 6-10 and the simulation distance to 4-6.",
+            "En büyük FPS kazancı oyun içinden gelir: Ayarlar > Video'da görüş mesafesini 6-10'a, simülasyon mesafesini 4-6'ya indirin.",
+        ),
+        tr(
+            "Turning off fancy graphics, beautiful skies, smooth lighting and particles noticeably reduces GPU load.",
+            "Güzel grafikler, güzel gökyüzü, yumuşak aydınlatma ve parçacıkları kapatmak GPU yükünü belirgin azaltır.",
+        ),
+        tr(
+            "A Game Mode resolution around 75% is usually not noticeable on blocky textures; the interface just gets a little softer.",
+            "Oyun Modu çözünürlüğü %75 civarında blok dokularda genelde fark edilmez; arayüz biraz yumuşar.",
+        ),
+        tr(
+            "On Android, Bedrock itself is capped at 60 FPS; targeting 90 does not raise FPS, it only heats the phone. Aim for a steady frame time instead.",
+            "Bedrock Android'de oyunun kendisi 60 FPS'e sınırlı; 90 hedeflemek FPS'i artırmaz, yalnızca ısıtır. Akıcılık için kare süresini düzgün tutmaya bakın.",
+        ),
+        tr(
+            "If you like, try the ANGLE (Vulkan) engine and compare the average FPS and heat in Last session with the default; keep whichever is better.",
+            "ANGLE (Vulkan) motorunu isterseniz deneyip Son oyun oturumundaki ortalama FPS ve ısıyı varsayılanla karşılaştırın; hangisi daha iyiyse onu bırakın.",
+        ),
     )
     GameKind.MinecraftJava -> listOf(
-        "Java sürümü başlatıcının kendi renderer'ını kullanır; o seçim başlatıcının ayarlarında " +
-            "yapılır ve bu uygulama onu değiştiremez.",
-        "Görüş mesafesini düşürmek, başlatıcıda RAM'i cihazın boş belleğine göre ayarlamak ve " +
-            "sürümünüzle uyumlu bir optimizasyon modu kullanmak FPS'i en çok artıran adımlardır.",
-        "Burada seçtiğiniz grafik motoru yalnızca başlatıcı uygulamasının sürücü yolunu etkiler; " +
-            "etkisi oyun/renderer'a göre değişir, ölçerek karşılaştırın.",
+        tr(
+            "The Java edition uses the launcher's own renderer; that choice is made in the launcher's settings and this app cannot change it.",
+            "Java sürümü başlatıcının kendi renderer'ını kullanır; o seçim başlatıcının ayarlarında yapılır ve bu uygulama onu değiştiremez.",
+        ),
+        tr(
+            "Lowering the render distance, setting the launcher's RAM according to the device's free memory and using an optimization mod compatible with your version are the steps that raise FPS the most.",
+            "Görüş mesafesini düşürmek, başlatıcıda RAM'i cihazın boş belleğine göre ayarlamak ve sürümünüzle uyumlu bir optimizasyon modu kullanmak FPS'i en çok artıran adımlardır.",
+        ),
+        tr(
+            "The graphics engine you pick here only affects the launcher app's driver path; the effect varies by game/renderer, so measure and compare.",
+            "Burada seçtiğiniz grafik motoru yalnızca başlatıcı uygulamasının sürücü yolunu etkiler; etkisi oyun/renderer'a göre değişir, ölçerek karşılaştırın.",
+        ),
     )
     GameKind.Generic -> emptyList()
 }
@@ -274,10 +301,8 @@ const val kBedrockPackage = "com.mojang.minecraftpe"
  */
 fun modWarning(kind: GameKind): String? = when (kind) {
     GameKind.Generic -> null
-    else ->
-        "Dikkat: Minecraft için dışarıdan indirilen \"FPS motoru\", değiştirilmiş APK ya da " +
-            "enjekte edilen kütüphaneler hesabınızın (ve Realms/sunucu erişiminizin) banlanmasına, " +
-            "zararlı yazılım bulaşmasına ve dünya verinizin kaybolmasına yol açabilir. Terminal bu " +
-            "tür dosyaları indirmez ya da kurmaz; yalnızca sistem ayarlarını (sürücü yolu, ekran, " +
-            "güç profili) değiştirir. Güncellemeleri yalnızca Google Play'den yapın."
+    else -> tr(
+        "Warning: \"FPS engines\", modified APKs or injected libraries downloaded from outside for Minecraft can get your account (and your Realms/server access) banned, infect your phone with malware and destroy your world data. TerminalF never downloads or installs such files; it only changes system settings (driver path, display, power profile). Only update from Google Play.",
+        "Dikkat: Minecraft için dışarıdan indirilen \"FPS motoru\", değiştirilmiş APK ya da enjekte edilen kütüphaneler hesabınızın (ve Realms/sunucu erişiminizin) banlanmasına, zararlı yazılım bulaşmasına ve dünya verinizin kaybolmasına yol açabilir. Terminal bu tür dosyaları indirmez ya da kurmaz; yalnızca sistem ayarlarını (sürücü yolu, ekran, güç profili) değiştirir. Güncellemeleri yalnızca Google Play'den yapın.",
+    )
 }

@@ -1,5 +1,6 @@
 package com.terminalf.app.state
 
+import com.terminalf.app.core.tr
 import com.terminalf.app.core.OptimizationProfile
 import com.terminalf.app.core.ShellResult
 import com.terminalf.app.core.Tweak
@@ -28,10 +29,10 @@ data class ProfileResult(val applied: Int, val skipped: Int, val failed: Int) {
     val summary: String
         get() {
             val parts = ArrayList<String>()
-            if (applied > 0) parts.add("$applied uygulandı")
-            if (skipped > 0) parts.add("$skipped zaten hazırdı")
-            if (failed > 0) parts.add("$failed başarısız")
-            return if (parts.isEmpty()) "Yapılacak bir şey yok" else parts.joinToString(" · ")
+            if (applied > 0) parts.add(tr("$applied applied", "$applied uygulandı"))
+            if (skipped > 0) parts.add(tr("$skipped already in place", "$skipped zaten hazırdı"))
+            if (failed > 0) parts.add(tr("$failed failed", "$failed başarısız"))
+            return if (parts.isEmpty()) tr("Nothing to do", "Yapılacak bir şey yok") else parts.joinToString(" · ")
         }
 }
 
@@ -129,9 +130,9 @@ class ControlController(
     /** Kullanıcıya gösterilen tek satırlık durum. */
     val headline: String
         get() = when (phase) {
-            ControlPhase.Checking -> "Denetleniyor…"
-            ControlPhase.Ready -> if (path == AccessPath.Root) "Tam kontrol · root" else "Tam kontrol · $identity"
-            ControlPhase.NeedsSetup -> "Tam kontrol kapalı"
+            ControlPhase.Checking -> tr("Checking…", "Denetleniyor…")
+            ControlPhase.Ready -> if (path == AccessPath.Root) tr("Full control · root", "Tam kontrol · root") else tr("Full control · $identity", "Tam kontrol · $identity")
+            ControlPhase.NeedsSetup -> tr("Full control is off", "Tam kontrol kapalı")
         }
 
     fun tweakById(id: String): Tweak? = tweaks.firstOrNull { it.id == id }
@@ -157,7 +158,7 @@ class ControlController(
             throw e
         } catch (e: Exception) {
             tweaks = emptyList()
-            addLog("✗ Tweak listesi okunamadı: $e")
+            addLog(tr("✗ Could not read the tweak list: $e", "✗ Tweak listesi okunamadı: $e"))
         }
         notifyChanged()
         detect()
@@ -181,7 +182,7 @@ class ControlController(
             path = AccessPath.Root
             identity = root.identity?.label ?: "root"
             phase = ControlPhase.Ready
-            addLog("✓ Kök erişimi bulundu.")
+            addLog(tr("✓ Root access found.", "✓ Kök erişimi bulundu."))
             notifyChanged()
             scope.launch { refreshStatuses() }
             return
@@ -197,14 +198,14 @@ class ControlController(
             phase = ControlPhase.Ready
             verifying = true
             val generation = verifyGeneration
-            addLog("✓ Shizuku izni var; komut servisi arka planda doğrulanıyor.")
+            addLog(tr("✓ Shizuku permission granted; verifying the command service in the background.", "✓ Shizuku izni var; komut servisi arka planda doğrulanıyor."))
             notifyChanged()
             scope.launch { verifyShizuku(generation) }
         } else {
             path = AccessPath.None
             identity = ""
             phase = ControlPhase.NeedsSetup
-            error = if (!running) "Shizuku servisi çalışmıyor." else "Shizuku izni verilmedi."
+            error = if (!running) tr("The Shizuku service is not running.", "Shizuku servisi çalışmıyor.") else tr("Shizuku permission was not granted.", "Shizuku izni verilmedi.")
             notifyChanged()
         }
     }
@@ -216,14 +217,14 @@ class ControlController(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            ShizukuProbe(running = true, permitted = true, error = "Doğrulama başarısız: ${e.message ?: e.javaClass.simpleName}")
+            ShizukuProbe(running = true, permitted = true, error = tr("Verification failed: ${e.message ?: e.javaClass.simpleName}", "Doğrulama başarısız: ${e.message ?: e.javaClass.simpleName}"))
         }
         // Bu arada yeniden denetim yapıldıysa eski sonuç yok sayılır.
         if (generation != verifyGeneration) return
         verifying = false
         if (probe.ready) {
             identity = probe.identity?.label ?: "shell"
-            addLog("✓ Shizuku doğrulandı ($identity).")
+            addLog(tr("✓ Shizuku verified ($identity).", "✓ Shizuku doğrulandı ($identity)."))
             notifyChanged()
             refreshStatuses()
         } else {
@@ -233,7 +234,7 @@ class ControlController(
             shizukuRunning = probe.running
             shizukuPermitted = probe.permitted
             error = probe.error
-            addLog("✗ Shizuku doğrulanamadı: ${probe.error ?: "bilinmeyen neden"}")
+            addLog(tr("✗ Shizuku could not be verified: ${probe.error ?: "unknown reason"}", "✗ Shizuku doğrulanamadı: ${probe.error ?: "bilinmeyen neden"}"))
             notifyChanged()
         }
     }
@@ -250,7 +251,7 @@ class ControlController(
             detect()
             if (!ready && shizukuRunning && !shizukuPermitted) {
                 val granted = shizuku.requestPermission()
-                addLog(if (granted) "✓ Shizuku izni verildi." else "✗ Shizuku izni verilmedi.")
+                addLog(if (granted) tr("✓ Shizuku permission granted.", "✓ Shizuku izni verildi.") else tr("✗ Shizuku permission was not granted.", "✗ Shizuku izni verilmedi."))
                 detect(recheckRoot = false)
             }
         } finally {
@@ -262,7 +263,7 @@ class ControlController(
     suspend fun exec(command: String): ShellResult = when (path) {
         AccessPath.Root -> root.exec(command)
         AccessPath.Shizuku -> shizuku.exec(command)
-        AccessPath.None -> throw ControlUnavailableException("Tam kontrol etkin değil.")
+        AccessPath.None -> throw ControlUnavailableException(tr("Full control is not enabled.", "Tam kontrol etkin değil."))
     }
 
     suspend fun refreshStatuses() {
@@ -288,17 +289,17 @@ class ControlController(
 
     /** Tek bir komutu çalıştırır; sonucu günlüğe yazar ve sade bir sonuç döner. */
     suspend fun shell(label: String, command: String): TweakOutcome {
-        if (!ready) return TweakOutcome(false, "Tam kontrol etkin değil.")
+        if (!ready) return TweakOutcome(false, tr("Full control is not enabled.", "Tam kontrol etkin değil."))
         return try {
             val result = exec(command)
             val reason = failureReason(result)
             for (line in outputLines(result.output).take(6)) addLog("  $line")
             if (reason != null) {
                 addLog("✗ $label: $reason")
-                TweakOutcome(false, "$label başarısız: $reason")
+                TweakOutcome(false, tr("$label failed: $reason", "$label başarısız: $reason"))
             } else {
                 addLog("✓ $label")
-                TweakOutcome(true, "$label tamamlandı")
+                TweakOutcome(true, tr("$label completed", "$label tamamlandı"))
             }
         } catch (e: CancellationException) {
             throw e
@@ -309,23 +310,23 @@ class ControlController(
             TweakOutcome(false, e.reason)
         } catch (e: Exception) {
             addLog("✗ $label: $e")
-            TweakOutcome(false, "$label çalıştırılamadı.")
+            TweakOutcome(false, tr("$label could not be run.", "$label çalıştırılamadı."))
         }
     }
 
     private suspend fun runTweak(tweak: Tweak, apply: Boolean): TweakOutcome {
         val command = if (apply) tweak.applyCommand else tweak.revertCommand
-        if (command.isNullOrEmpty()) return TweakOutcome(false, "Bu işlem geri alınamaz.")
-        addLog("› ${tweak.title} ${if (apply) "" else "(geri al)"}")
-        val outcome = shell(tweak.title, command)
+        if (command.isNullOrEmpty()) return TweakOutcome(false, tr("This action cannot be undone.", "Bu işlem geri alınamaz."))
+        addLog("› ${tweak.displayTitle} ${if (apply) "" else tr("(revert)", "(geri al)")}")
+        val outcome = shell(tweak.displayTitle, command)
         if (outcome.ok && tweak.hasCheck) {
             readStatus(tweak)
             // Komut "başarılı" döndü ama değer değişmediyse bunu gizleme.
             val wanted = if (apply) TweakState.On else TweakState.Off
             val actual = stateOf(tweak.id)
             if (actual != TweakState.Unknown && actual != wanted) {
-                val msg = "Komut çalıştı ama cihaz ayarı değişmedi (üretici kısıtlıyor olabilir)."
-                addLog("✗ ${tweak.title}: $msg")
+                val msg = tr("The command ran but the device setting did not change (the manufacturer may restrict it).", "Komut çalıştı ama cihaz ayarı değişmedi (üretici kısıtlıyor olabilir).")
+                addLog("✗ ${tweak.displayTitle}: $msg")
                 return TweakOutcome(false, msg)
             }
         }
@@ -334,7 +335,7 @@ class ControlController(
 
     /** Tek bir tweak'i açar/kapatır (ya da tek seferlik eylemi çalıştırır). */
     suspend fun setTweak(tweak: Tweak, apply: Boolean): TweakOutcome {
-        if (!ready) return TweakOutcome(false, "Önce tam kontrolü etkinleştirin.")
+        if (!ready) return TweakOutcome(false, tr("Enable full control first.", "Önce tam kontrolü etkinleştirin."))
         working.add(tweak.id)
         notifyChanged()
         try {
@@ -348,7 +349,7 @@ class ControlController(
     /** Bir profilin tüm ayarlarını sırayla uygular ya da geri alır. */
     suspend fun runProfile(profile: OptimizationProfile, apply: Boolean): ProfileResult {
         if (!ready || busy) return ProfileResult(applied = 0, skipped = 0, failed = 0)
-        busyLabel = "${profile.title} ${if (apply) "uygulanıyor" else "geri alınıyor"}…"
+        busyLabel = "${profile.title} ${if (apply) tr("is being applied", "uygulanıyor") else tr("is being reverted", "geri alınıyor")}…"
         notifyChanged()
         var applied = 0
         var skipped = 0
@@ -396,21 +397,21 @@ class ControlController(
     // ---- Hızlı eylemler (Ana Sayfa) ------------------------------------
 
     /** RAM'i boşaltır: arka plan uygulamalarını sonlandırır. */
-    suspend fun freeMemory(): TweakOutcome = shell("Bellek temizliği", "am kill-all")
+    suspend fun freeMemory(): TweakOutcome = shell(tr("Memory cleanup", "Bellek temizliği"), "am kill-all")
 
     /** Tüm uygulamaların önbelleğini temizler. */
-    suspend fun trimAllCaches(): TweakOutcome = shell("Önbellek temizliği", "pm trim-caches 999999999999")
+    suspend fun trimAllCaches(): TweakOutcome = shell(tr("Cache cleanup", "Önbellek temizliği"), "pm trim-caches 999999999999")
 
     // ---- Uygulama eylemleri (Uygulamalar sayfası) -----------------------
 
-    suspend fun forceStop(pkg: String) = pkgAction("Durdur", pkg) { "am force-stop $it" }
-    suspend fun clearAppCache(pkg: String) = pkgAction("Önbellek temizle", pkg) { "pm clear --cache-only $it" }
-    suspend fun freeze(pkg: String) = pkgAction("Dondur", pkg) { "pm disable-user --user 0 $it" }
-    suspend fun unfreeze(pkg: String) = pkgAction("Etkinleştir", pkg) { "pm enable $it" }
-    suspend fun uninstallForUser(pkg: String) = pkgAction("Kaldır", pkg) { "pm uninstall --user 0 $it" }
+    suspend fun forceStop(pkg: String) = pkgAction(tr("Force stop", "Durdur"), pkg) { "am force-stop $it" }
+    suspend fun clearAppCache(pkg: String) = pkgAction(tr("Clear cache", "Önbellek temizle"), pkg) { "pm clear --cache-only $it" }
+    suspend fun freeze(pkg: String) = pkgAction(tr("Freeze", "Dondur"), pkg) { "pm disable-user --user 0 $it" }
+    suspend fun unfreeze(pkg: String) = pkgAction(tr("Enable", "Etkinleştir"), pkg) { "pm enable $it" }
+    suspend fun uninstallForUser(pkg: String) = pkgAction(tr("Uninstall", "Kaldır"), pkg) { "pm uninstall --user 0 $it" }
 
     private suspend fun pkgAction(label: String, pkg: String, build: (String) -> String): TweakOutcome {
-        if (!isValidPackageName(pkg)) return TweakOutcome(false, "Geçersiz paket adı.")
+        if (!isValidPackageName(pkg)) return TweakOutcome(false, tr("Invalid package name.", "Geçersiz paket adı."))
         return shell("$label: $pkg", build(pkg))
     }
 }

@@ -1,5 +1,6 @@
 package com.terminalf.app.data
 
+import com.terminalf.app.core.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
@@ -59,7 +60,7 @@ object ProcessRunner {
                 process.destroy()
             } catch (_: Throwable) {
             }
-            throw TimeoutException("Komut ${timeoutMs / 1000} sn içinde bitmedi.")
+            throw TimeoutException(tr("The command did not finish within ${timeoutMs / 1000} s.", "Komut ${timeoutMs / 1000} sn içinde bitmedi."))
         }
         out.join(2000)
         err.join(2000)
@@ -83,9 +84,9 @@ object ProcessRunner {
                 try {
                     exit = process.exitValue()
                 } catch (_: IllegalThreadStateException) {
-                    if (!active()) throw kotlinx.coroutines.CancellationException("iptal edildi")
+                    if (!active()) throw kotlinx.coroutines.CancellationException(tr("cancelled", "iptal edildi"))
                     if (System.nanoTime() > deadline) {
-                        throw TimeoutException("Komut ${timeoutMs / 1000} sn içinde bitmedi.")
+                        throw TimeoutException(tr("The command did not finish within ${timeoutMs / 1000} s.", "Komut ${timeoutMs / 1000} sn içinde bitmedi."))
                     }
                     Thread.sleep(15)
                 }

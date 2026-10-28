@@ -1,5 +1,6 @@
 package com.terminalf.app.data
 
+import com.terminalf.app.core.tr
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.LinkProperties
@@ -67,6 +68,6 @@ class NetworkService(context: Context? = null) {
     }
 
     private companion object {
-        const val NOT_FOUND = "Bulunamadı"
+        val NOT_FOUND: String get() = tr("Not found", "Bulunamadı")
     }
 }

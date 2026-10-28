@@ -18,7 +18,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.terminalf.app.core.AppPalette
+import com.terminalf.app.core.logoRamp
+import com.terminalf.app.core.AccentSet
 import com.terminalf.app.core.AppPalettes
+import com.terminalf.app.core.luminanceOf
 
 /**
  * Uygulamanın renk kaynağı. Değerler seçili temaya göre değişir; renkleri her zaman
@@ -26,7 +29,7 @@ import com.terminalf.app.core.AppPalettes
  * yeniden çizilir (CompositionLocal).
  */
 @Immutable
-class AppColorScheme(val palette: AppPalette, logoArgb: List<Long>) {
+class AppColorScheme(val palette: AppPalette, logoArgb: List<Long>, val colorful: Boolean = true) {
     val isDark: Boolean = palette.isDark
 
     val bg = Color(palette.bg)
@@ -46,8 +49,30 @@ class AppColorScheme(val palette: AppPalette, logoArgb: List<Long>) {
     /** Logo çiziminde kullanılan iki renk (tek renkse iki kez döner). */
     val logoColors: List<Color> = logoArgb.map { Color(it) }
 
+    /** "F" logosunun altı renk durağı (üst/orta/alt çubuk, başlangıç + bitiş); bkz. `logoRamp`. */
+    val logoStops: List<Color> = logoRamp(logoArgb).map { Color(it) }
+
     /** Marka gradyanı (sol üst -> sağ alt). */
     val brand: Brush = Brush.linearGradient(listOf(primary, secondary))
+
+    /** Marka renginin (düğme, seçili öğe) üzerindeki yazı/simge rengi: zemine göre okunur seçilir. */
+    val onBrand: Color =
+        if (luminanceOf(palette.primary) > 0.30) Color(0xFF07070A) else Color(0xFFFFFFFF)
+
+    private val accentSet = AccentSet.forMode(palette.isDark)
+
+    // Çok renkli vurgular. "Renkli arayüz" kapalıysa hepsi tek vurgu rengine (primary) döner.
+    val blue: Color = if (colorful) Color(accentSet.blue) else primary
+    val cyan: Color = if (colorful) Color(accentSet.cyan) else primary
+    val green: Color = if (colorful) Color(accentSet.green) else primary
+    val yellow: Color = if (colorful) Color(accentSet.yellow) else primary
+    val orange: Color = if (colorful) Color(accentSet.orange) else primary
+    val red: Color = if (colorful) Color(accentSet.red) else primary
+    val pink: Color = if (colorful) Color(accentSet.pink) else primary
+    val violet: Color = if (colorful) Color(accentSet.violet) else primary
+
+    /** İki renkli (gradyan) simge zemini için: [color] -> biraz kaymış komşusu. */
+    fun gradientOf(color: Color): Brush = Brush.linearGradient(listOf(color, color.copy(alpha = 0.72f)))
 
     /** Yüzdeye göre "ne kadar iyi" rengi (yüksek = iyi). */
     fun forHealth(score: Number): Color {
@@ -59,11 +84,11 @@ class AppColorScheme(val palette: AppPalette, logoArgb: List<Long>) {
         }
     }
 
-    /** Doluluk oranına göre renk (yüksek = kötü): RAM / depolama için. */
-    fun forUsage(ratio: Double): Color = when {
+    /** Doluluk oranına göre renk (yüksek = kötü): RAM / depolama için. [base] normal durum rengi. */
+    fun forUsage(ratio: Double, base: Color = primary): Color = when {
         ratio >= 0.9 -> danger
         ratio >= 0.75 -> warn
-        else -> primary
+        else -> base
     }
 }
 
@@ -85,15 +110,16 @@ fun Color.faded(opacity: Float): Color = copy(alpha = opacity.coerceIn(0f, 1f))
 fun TerminalFTheme(
     palette: AppPalette,
     logoArgb: List<Long>,
+    colorful: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val scheme = AppColorScheme(palette, logoArgb)
+    val scheme = AppColorScheme(palette, logoArgb, colorful)
     val material = if (scheme.isDark) {
         darkColorScheme(
             primary = scheme.primary,
-            onPrimary = scheme.bg,
+            onPrimary = scheme.onBrand,
             secondary = scheme.secondary,
-            onSecondary = scheme.bg,
+            onSecondary = scheme.onBrand,
             background = scheme.bg,
             onBackground = scheme.text,
             surface = scheme.surface,
@@ -113,9 +139,9 @@ fun TerminalFTheme(
     } else {
         lightColorScheme(
             primary = scheme.primary,
-            onPrimary = scheme.bg,
+            onPrimary = scheme.onBrand,
             secondary = scheme.secondary,
-            onSecondary = scheme.bg,
+            onSecondary = scheme.onBrand,
             background = scheme.bg,
             onBackground = scheme.text,
             surface = scheme.surface,
@@ -146,7 +172,7 @@ fun TerminalFTheme(
                 @Suppress("DEPRECATION")
                 window.statusBarColor = android.graphics.Color.TRANSPARENT
                 @Suppress("DEPRECATION")
-                window.navigationBarColor = scheme.surface.toArgb()
+                window.navigationBarColor = scheme.bg.toArgb()
             }
         }
     }

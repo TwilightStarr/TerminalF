@@ -12,10 +12,10 @@ object LauncherIcons {
     /** Manifestteki alias adının son ekini ve simge kaynağını belirleyen anahtarlar. */
     val keys: List<String> = LogoStyle.presets.filter { it.colors.isNotEmpty() }.map { it.id }
 
-    /** Varsayılan (kurulumdaki) simge: beyaz. */
-    const val DEFAULT_KEY = "white"
+    /** Varsayılan (kurulumdaki) simge: Gümüş (özgün logo). `tools/gen_launcher_icons.py` ile aynı. */
+    const val DEFAULT_KEY = "silver"
 
-    /** `white` -> `LauncherWhite`, `g_ocean` -> `LauncherGOcean`. */
+    /** `silver` -> `LauncherSilver`, `g_ocean` -> `LauncherGOcean`. */
     fun aliasClassName(key: String): String =
         "com.terminalf.app.Launcher" + key.split('_').joinToString("") { part ->
             part.replaceFirstChar { it.uppercaseChar() }

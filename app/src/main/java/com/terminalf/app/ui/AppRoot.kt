@@ -4,8 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -17,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
@@ -44,6 +48,8 @@ import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Tune
 import com.terminalf.app.AppContainer
+import com.terminalf.app.core.tr
+import com.terminalf.app.ui.pages.DeviceNav
 import com.terminalf.app.state.Haptics
 import com.terminalf.app.state.Motion
 import com.terminalf.app.ui.components.DialogHost
@@ -61,6 +67,7 @@ import com.terminalf.app.ui.pages.GamePage
 import com.terminalf.app.ui.pages.HomePage
 import com.terminalf.app.ui.pages.OptimizePage
 import com.terminalf.app.ui.sheets.showWelcomeSheet
+import com.terminalf.app.ui.theme.AppColorScheme
 import com.terminalf.app.ui.theme.AppTheme
 import com.terminalf.app.ui.theme.TerminalFTheme
 import com.terminalf.app.ui.theme.faded
@@ -75,42 +82,61 @@ fun AppRoot(container: AppContainer) {
     val toaster = remember { Toaster(snackbar, scope) }
     val dialogs = remember { DialogHost() }
     val sheets = remember { SheetHost() }
+    // Gezinme durumu `key(language)` dışında tutulur: dil değişince arayüz baştan çizilir ama
+    // kullanıcı bulunduğu sekmede ve alt sayfada kalır.
+    val nav = remember { ShellNav() }
 
-    TerminalFTheme(palette = settings.palette, logoArgb = settings.logoColors) {
+    TerminalFTheme(palette = settings.palette, logoArgb = settings.logoColors, colorful = settings.colorful) {
         CompositionLocalProvider(
             LocalToaster provides toaster,
             LocalDialogs provides dialogs,
             LocalSheets provides sheets,
         ) {
-            AppShell(container, snackbar)
-            DialogHostContent(dialogs)
-            SheetHostContent(sheets)
+            // Metinler oluşturulurken seçili dile göre çözülür; dil değişince her şey yeniden kurulur.
+            key(settings.language) {
+                AppShell(container, snackbar, nav)
+                DialogHostContent(dialogs)
+                SheetHostContent(sheets)
+            }
         }
     }
 }
 
-private class Tab(val label: String, val outlined: ImageVector, val rounded: ImageVector)
+/** Alt gezinme durumu (seçili sekme, açılmış sekmeler, Cihaz alt sayfası). */
+private class ShellNav {
+    var index by mutableIntStateOf(0)
+    var visited by mutableStateOf(setOf(0))
+    val device = DeviceNav()
+}
+
+private class Tab(
+    val label: String,
+    val outlined: ImageVector,
+    val rounded: ImageVector,
+    /** Sekmenin kendi rengi (seçiliyken simge, yazı ve gösterge bu renkte olur). */
+    val accent: (AppColorScheme) -> Color,
+)
 
 /**
  * Alt gezinme çubuğu + sayfalar. Sayfalar ilk açıldıklarında oluşturulur (uygulama hızlı açılır)
  * ve sonra bellekte tutulur (sekme değişince yeniden yüklenmez, uygulama listesi yeniden taranmaz).
  */
 @Composable
-private fun AppShell(container: AppContainer, snackbar: SnackbarHostState) {
+private fun AppShell(container: AppContainer, snackbar: SnackbarHostState, nav: ShellNav) {
     val c = AppTheme.colors
     val sheets = LocalSheets.current
-    var index by remember { mutableIntStateOf(0) }
-    val visited = remember { mutableStateOf(setOf(0)) }
+    var index by nav::index
+    var visited by nav::visited
     val fade = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
 
     val tabs = remember {
         listOf(
-            Tab("Ana Sayfa", Icons.Outlined.SpaceDashboard, Icons.Rounded.SpaceDashboard),
-            Tab("Optimize", Icons.Outlined.Tune, Icons.Rounded.Tune),
-            Tab("Uygulamalar", Icons.Outlined.Apps, Icons.Rounded.Apps),
-            Tab("Oyun", Icons.Outlined.SportsEsports, Icons.Rounded.SportsEsports),
-            Tab("Cihaz", Icons.Outlined.Smartphone, Icons.Rounded.Smartphone),
+            Tab(tr("Home", "Ana Sayfa"), Icons.Outlined.SpaceDashboard, Icons.Rounded.SpaceDashboard) { it.blue },
+            Tab(tr("Optimize", "Optimize"), Icons.Outlined.Tune, Icons.Rounded.Tune) { it.orange },
+            Tab(tr("Apps", "Uygulamalar"), Icons.Outlined.Apps, Icons.Rounded.Apps) { it.violet },
+            Tab(tr("Game", "Oyun"), Icons.Outlined.SportsEsports, Icons.Rounded.SportsEsports) { it.green },
+            Tab(tr("Device", "Cihaz"), Icons.Outlined.Smartphone, Icons.Rounded.Smartphone) { it.cyan },
         )
     }
 
@@ -125,7 +151,7 @@ private fun AppShell(container: AppContainer, snackbar: SnackbarHostState) {
             }
         }
         index = i
-        visited.value = visited.value + i
+        visited = visited + i
     }
 
     // İlk açılışta bir kez karşılama ve bildirim izni.
@@ -144,9 +170,12 @@ private fun AppShell(container: AppContainer, snackbar: SnackbarHostState) {
         containerColor = c.bg,
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            NavigationBar(containerColor = c.surface, tonalElevation = 0.dp) {
+            Column {
+            HorizontalDivider(thickness = 1.dp, color = c.outline)
+            NavigationBar(containerColor = c.bg, tonalElevation = 0.dp) {
                 tabs.forEachIndexed { i, tab ->
                     val selected = i == index
+                    val tabColor = tab.accent(c)
                     NavigationBarItem(
                         selected = selected,
                         onClick = { select(i) },
@@ -166,14 +195,15 @@ private fun AppShell(container: AppContainer, snackbar: SnackbarHostState) {
                         },
                         alwaysShowLabel = true,
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = c.primary,
-                            selectedTextColor = c.primary,
+                            selectedIconColor = tabColor,
+                            selectedTextColor = tabColor,
                             unselectedIconColor = c.muted,
                             unselectedTextColor = c.muted,
-                            indicatorColor = c.primary.faded(0.16f),
+                            indicatorColor = tabColor.faded(0.16f),
                         ),
                     )
                 }
+            }
             }
         },
     ) { inner ->
@@ -187,7 +217,7 @@ private fun AppShell(container: AppContainer, snackbar: SnackbarHostState) {
                 },
         ) {
             for (i in 0 until 5) {
-                if (i !in visited.value) continue
+                if (i !in visited) continue
                 val selected = i == index
                 // Seçili olmayan sayfa boyutsuz ve yerleştirilmemiş: çizilmez, dokunmaya kapalı;
                 // ama kompozisyonu (kaydırma konumu, yüklenen liste) korunur.
@@ -206,7 +236,7 @@ private fun AppShell(container: AppContainer, snackbar: SnackbarHostState) {
                         1 -> OptimizePage(control = container.control)
                         2 -> AppsPage(control = container.control)
                         3 -> GamePage(control = container.control, game = container.game)
-                        else -> DevicePage(live = container.live, settings = container.settings, notifier = container.notifier)
+                        else -> DevicePage(live = container.live, settings = container.settings, notifier = container.notifier, nav = nav.device)
                     }
                 }
             }

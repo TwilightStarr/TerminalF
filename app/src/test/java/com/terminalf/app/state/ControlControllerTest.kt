@@ -68,6 +68,8 @@ private fun controller(root: RootAccess, tweaks: List<Tweak>) =
     ControlController(root, FakeShizuku(), FakeCatalog(tweaks), CoroutineScope(Dispatchers.Unconfined))
 
 class ControlControllerTest {
+    @get:org.junit.Rule val language = com.terminalf.app.core.TestLanguage()
+
     @Test fun needsSetupWithoutAccess() = runBlocking {
         val c = controller(FakeRoot(false), emptyList())
         c.init()

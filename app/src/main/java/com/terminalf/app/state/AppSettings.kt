@@ -1,8 +1,11 @@
 package com.terminalf.app.state
 
 import com.terminalf.app.core.AlertThresholds
+import com.terminalf.app.core.AccentStyle
+import com.terminalf.app.core.AppLanguage
 import com.terminalf.app.core.AppPalette
 import com.terminalf.app.core.AppPalettes
+import com.terminalf.app.core.I18n
 import com.terminalf.app.core.LogoStyle
 import com.terminalf.app.core.logoColorsFor
 import kotlin.math.roundToInt
@@ -23,10 +26,15 @@ class AppSettings(private val store: SettingsStore) : Observable() {
         private const val BATTERY_KEY = "alert_battery"
         private const val MEMORY_KEY = "alert_memory"
         private const val ANIM_KEY = "animations"
+        private const val LANGUAGE_KEY = "language"
         private const val THEME_KEY = "theme_id"
         private const val LOGO_KEY = "logo_id"
         private const val LOGO_CUSTOM_KEY = "logo_custom"
-        const val DEFAULT_LOGO_CUSTOM: Long = 0xFFFFFFFF
+        private const val AMOLED_KEY = "amoled"
+        private const val COLORFUL_KEY = "colorful"
+        private const val ACCENT_KEY = "accent_id"
+        private const val ACCENT_CUSTOM_KEY = "accent_custom"
+        const val DEFAULT_LOGO_CUSTOM: Long = 0xFF5B9DFF
     }
 
     /**
@@ -47,6 +55,10 @@ class AppSettings(private val store: SettingsStore) : Observable() {
     var haptics: Boolean = true
         private set
 
+    /** Arayüz dili. İlk açılışta İngilizce; seçim diske yazılır ve [I18n.language] ile eşitlenir. */
+    var language: AppLanguage = AppLanguage.DEFAULT
+        private set
+
     /** Arayüz animasyonları (geçişler, belirme efektleri). */
     var animations: Boolean = true
         private set
@@ -59,6 +71,20 @@ class AppSettings(private val store: SettingsStore) : Observable() {
     var logoCustom: Long = DEFAULT_LOGO_CUSTOM
         private set
 
+    /** Koyu temalarda zemin gerçek siyah (AMOLED'de piksel kapanır). */
+    var amoled: Boolean = true
+        private set
+
+    /** Açık: her kutu/düğme kendi rengini alır. Kapalı: her şey tek vurgu rengiyle çizilir. */
+    var colorful: Boolean = true
+        private set
+
+    /** Vurgu rengi: "theme" (temanın kendi rengi), hazır renk kimliği ya da "custom". */
+    var accentId: String = AccentStyle.THEME_ID
+        private set
+    var accentCustom: Long = AccentStyle.DEFAULT_CUSTOM
+        private set
+
     var temperatureC: Double = 42.0
         private set
     var storagePercent: Int = 90
@@ -69,9 +95,10 @@ class AppSettings(private val store: SettingsStore) : Observable() {
         private set
 
     /** Görünüm değişti mi anlamak için kısa imza. */
-    val appearanceKey: String get() = "$themeId|$logoId|$logoCustom"
+    val appearanceKey: String
+        get() = "$themeId|$amoled|$colorful|$accentId|$accentCustom|$logoId|$logoCustom"
 
-    val palette: AppPalette get() = AppPalettes.byId(themeId)
+    val palette: AppPalette get() = AppPalettes.resolve(themeId, amoled, accentId, accentCustom)
 
     /** Logo çiziminde kullanılacak iki renk (0xAARRGGBB). */
     val logoColors: List<Long> get() = logoColorsFor(palette, logoId, logoCustom)
@@ -95,6 +122,7 @@ class AppSettings(private val store: SettingsStore) : Observable() {
             healthAlerts = store.readBool(ALERTS_KEY, true)
             haptics = store.readBool(HAPTICS_KEY, true)
             animations = store.readBool(ANIM_KEY, true)
+            language = AppLanguage.fromTag(store.readString(LANGUAGE_KEY, AppLanguage.DEFAULT.tag))
             temperatureC = store.readDouble(TEMP_KEY, 42.0).coerceIn(35.0, 50.0)
             storagePercent = store.readDouble(STORAGE_KEY, 90.0).roundToInt().coerceIn(70, 98)
             batteryPercent = store.readDouble(BATTERY_KEY, 15.0).roundToInt().coerceIn(5, 30)
@@ -104,6 +132,11 @@ class AppSettings(private val store: SettingsStore) : Observable() {
             logoId = if (savedLogo == LogoStyle.CUSTOM_ID) savedLogo else LogoStyle.byId(savedLogo).id
             logoCustom = store.readString(LOGO_CUSTOM_KEY, DEFAULT_LOGO_CUSTOM.toString()).toLongOrNull()
                 ?: DEFAULT_LOGO_CUSTOM
+            amoled = store.readBool(AMOLED_KEY, true)
+            colorful = store.readBool(COLORFUL_KEY, true)
+            accentId = AccentStyle.normalize(store.readString(ACCENT_KEY, AccentStyle.THEME_ID))
+            accentCustom = store.readString(ACCENT_CUSTOM_KEY, AccentStyle.DEFAULT_CUSTOM.toString()).toLongOrNull()
+                ?: AccentStyle.DEFAULT_CUSTOM
         } catch (_: Exception) {
             // Tercihler okunamazsa varsayılanlarla devam et.
         }
@@ -195,6 +228,53 @@ class AppSettings(private val store: SettingsStore) : Observable() {
         notifyChanged()
         safe {
             store.writeString(LOGO_CUSTOM_KEY, logoCustom.toString())
+            store.writeString(LOGO_KEY, logoId)
+        }
+    }
+
+    fun setAmoled(v: Boolean) {
+        amoled = v
+        notifyChanged()
+        safe { store.writeBool(AMOLED_KEY, v) }
+    }
+
+    fun setColorful(v: Boolean) {
+        colorful = v
+        notifyChanged()
+        safe { store.writeBool(COLORFUL_KEY, v) }
+    }
+
+    /** Hazır vurgu rengi ("theme" = temanın kendi rengi). */
+    fun setAccent(id: String) {
+        accentId = AccentStyle.normalize(id)
+        notifyChanged()
+        safe { store.writeString(ACCENT_KEY, accentId) }
+    }
+
+    /** Özel vurgu rengi (0xAARRGGBB); seçildiği anda "Özel" moduna geçer. */
+    fun setAccentCustom(argb: Long) {
+        accentCustom = argb
+        accentId = AccentStyle.CUSTOM_ID
+        notifyChanged()
+        safe {
+            store.writeString(ACCENT_CUSTOM_KEY, accentCustom.toString())
+            store.writeString(ACCENT_KEY, accentId)
+        }
+    }
+
+    /** Tüm görünüm tercihlerini varsayılana döndürür (animasyon ve titreşim ayarına dokunmaz). */
+    fun resetAppearance() {
+        themeId = AppPalettes.DEFAULT_ID
+        amoled = true
+        colorful = true
+        accentId = AccentStyle.THEME_ID
+        logoId = LogoStyle.AUTO_ID
+        notifyChanged()
+        safe {
+            store.writeString(THEME_KEY, themeId)
+            store.writeBool(AMOLED_KEY, true)
+            store.writeBool(COLORFUL_KEY, true)
+            store.writeString(ACCENT_KEY, accentId)
             store.writeString(LOGO_KEY, logoId)
         }
     }

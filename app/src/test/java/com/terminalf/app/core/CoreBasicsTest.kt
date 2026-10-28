@@ -11,6 +11,8 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class FormatUtilsTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun bytesUnderOneKbStayInBytes() {
         assertEquals("0 B", formatBytes(0))
         assertEquals("512 B", formatBytes(512))
@@ -46,6 +48,8 @@ class FormatUtilsTest {
 }
 
 class SystemParsersTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun memInfo() {
         val sample = "MemTotal:        3800000 kB\nMemFree:          200000 kB\n" +
             "MemAvailable:    1900000 kB\nBuffers:           10000 kB\n"
@@ -88,6 +92,8 @@ class SystemParsersTest {
 }
 
 class AlertRulesTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     private val t = AlertThresholds()
 
     @Test fun firesOnceThenStaysQuiet() {
@@ -138,6 +144,8 @@ class AlertRulesTest {
 }
 
 class AdvisorTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun scores() {
         assertEquals(100, computeHealthScore())
         assertEquals(
@@ -175,6 +183,8 @@ class AdvisorTest {
 }
 
 class ShellUtilsTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun idOutput() {
         val id = parseIdOutput("uid=2000(shell) gid=2000(shell) groups=2000(shell)")
         assertNotNull(id)
@@ -234,13 +244,16 @@ class ShellUtilsTest {
 }
 
 class PalettesTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun idsUniqueAndEnough() {
         val ids = AppPalettes.all.map { it.id }.toSet()
         assertEquals(AppPalettes.all.size, ids.size)
         assertTrue(AppPalettes.all.size >= 15)
         assertEquals("mono_dark", AppPalettes.DEFAULT_ID)
         assertEquals(AppPalettes.DEFAULT_ID, AppPalettes.byId("yok_boyle_bir_tema").id)
-        assertEquals(0xFFF2F2F3L, AppPalettes.monoDark.primary)
+        assertEquals(0xFF5B9DFFL, AppPalettes.monoDark.primary)
+        assertEquals(0xFF000000L, AppPalettes.monoDark.bg)
     }
 
     @Test fun logoColors() {

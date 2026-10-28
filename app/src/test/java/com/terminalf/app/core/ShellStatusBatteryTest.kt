@@ -11,6 +11,8 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class TweakStatusTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun outputsMatchExact() {
         assertTrue(outputsMatch("1", "1"))
         assertFalse(outputsMatch("1", "0"))
@@ -78,6 +80,8 @@ class TweakStatusTest {
 }
 
 class BatteryMathTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     private val base = 1_700_000_000_000L
     private fun ms(min: Long = 0, sec: Long = 0) = base + min * 60_000 + sec * 1000
 

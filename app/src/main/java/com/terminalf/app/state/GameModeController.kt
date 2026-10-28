@@ -1,5 +1,6 @@
 package com.terminalf.app.state
 
+import com.terminalf.app.core.tr
 import com.terminalf.app.core.AngleSelection
 import com.terminalf.app.core.CpuPolicy
 import com.terminalf.app.core.Diagnosis
@@ -77,9 +78,9 @@ data class GameRunResult(val steps: List<GameStepResult>, val note: String? = nu
         get() {
             note?.let { return it }
             val parts = ArrayList<String>()
-            parts.add("${steps.count { it.ok }}/${steps.size} adım uygulandı")
-            if (optionalFailed.isNotEmpty()) parts.add("${optionalFailed.size} adım bu cihazda desteklenmedi")
-            if (requiredFailed.isNotEmpty()) parts.add("${requiredFailed.size} adım başarısız")
+            parts.add(tr("${steps.count { it.ok }}/${steps.size} steps applied", "${steps.count { it.ok }}/${steps.size} adım uygulandı"))
+            if (optionalFailed.isNotEmpty()) parts.add(tr("${optionalFailed.size} steps not supported on this device", "${optionalFailed.size} adım bu cihazda desteklenmedi"))
+            if (requiredFailed.isNotEmpty()) parts.add(tr("${requiredFailed.size} steps failed", "${requiredFailed.size} adım başarısız"))
             return parts.joinToString(" · ")
         }
 }
@@ -353,11 +354,11 @@ class GameModeController(
      * değişiklik yapmaz.
      */
     suspend fun compileSelected(): GameStepResult {
-        val label = "Oyunu önceden derle"
-        if (!control.ready) return GameStepResult(label, false, true, "Önce tam kontrolü etkinleştirin.")
+        val label = tr("Precompile the game", "Oyunu önceden derle")
+        if (!control.ready) return GameStepResult(label, false, true, tr("Enable full control first.", "Önce tam kontrolü etkinleştirin."))
         val pkg = config.packageName
-        if (!isSafePackage(pkg)) return GameStepResult(label, false, true, "Geçersiz paket adı.")
-        if (busy) return GameStepResult(label, false, true, "Başka bir işlem sürüyor.")
+        if (!isSafePackage(pkg)) return GameStepResult(label, false, true, tr("Invalid package name.", "Geçersiz paket adı."))
+        if (busy) return GameStepResult(label, false, true, tr("Another operation is in progress.", "Başka bir işlem sürüyor."))
         busy = true
         notifyChanged()
         try {
@@ -432,9 +433,9 @@ class GameModeController(
                 sessionState = null
                 persistSession(null)
                 read(kWatchdogClearMark)
-                syncNote = "Oyun kapandığı için ayarlar otomatik geri alındı."
+                syncNote = tr("The game closed, so the settings were reverted automatically.", "Oyun kapandığı için ayarlar otomatik geri alındı.")
             } else if (status.revertFailed) {
-                syncNote = "Otomatik geri alma tamamlanamadı; \"Geri Al\"a basın."
+                syncNote = tr("Automatic revert did not complete; press \"Revert\".", "Otomatik geri alma tamamlanamadı; \"Geri Al\"a basın.")
             }
         }
         notifyChanged()
@@ -468,10 +469,10 @@ class GameModeController(
      * böylece eski değerler HER ZAMAN gerçek orijinaldir.
      */
     suspend fun start(launch: Boolean = true, overrideConfig: GameModeConfig? = null): GameRunResult {
-        if (!control.ready) return GameRunResult(emptyList(), note = "Önce tam kontrolü etkinleştirin.")
-        if (busy) return GameRunResult(emptyList(), note = "Başka bir işlem sürüyor.")
+        if (!control.ready) return GameRunResult(emptyList(), note = tr("Enable full control first.", "Önce tam kontrolü etkinleştirin."))
+        if (busy) return GameRunResult(emptyList(), note = tr("Another operation is in progress.", "Başka bir işlem sürüyor."))
         val cfg = overrideConfig ?: config
-        if (!isSafePackage(cfg.packageName)) return GameRunResult(emptyList(), note = "Geçersiz paket adı.")
+        if (!isSafePackage(cfg.packageName)) return GameRunResult(emptyList(), note = tr("Invalid package name.", "Geçersiz paket adı."))
         busy = true
         notifyChanged()
         try {
@@ -483,7 +484,7 @@ class GameModeController(
                 timedOut = true
                 result = GameRunResult(
                     emptyList(),
-                    note = "Ayarlar zamanında uygulanamadı (yetki yolu yanıt vermiyor). Geri Al ile kontrol edin.",
+                    note = tr("The settings could not be applied in time (the permission path is not responding). Check with Revert.", "Ayarlar zamanında uygulanamadı (yetki yolu yanıt vermiyor). Geri Al ile kontrol edin."),
                 )
             }
             lastResult = result
@@ -511,7 +512,7 @@ class GameModeController(
         if (sessionState != null) {
             val undo = revertInternal()
             if (!undo.ok) {
-                return GameRunResult(undo.steps, note = "Önceki oyun modu geri alınamadı; yeniden deneyin.")
+                return GameRunResult(undo.steps, note = tr("The previous game mode could not be reverted; try again.", "Önceki oyun modu geri alınamadı; yeniden deneyin."))
             }
         }
 
@@ -539,38 +540,38 @@ class GameModeController(
         val results = runSteps(steps)
         val extra = ArrayList<GameStepResult>()
         if (cfg.method == ResolutionMethod.WholeScreen && cfg.reducesResolution && snap.physicalSize == null) {
-            extra.add(GameStepResult("Ekran çözünürlüğü", false, false, "Ekran boyutu okunamadı, atlandı."))
+            extra.add(GameStepResult(tr("Screen resolution", "Ekran çözünürlüğü"), false, false, tr("Screen size could not be read; skipped.", "Ekran boyutu okunamadı, atlandı.")))
         }
         if (cfg.cpuCap && control.path != AccessPath.Root) {
             extra.add(
                 GameStepResult(
-                    "İşlemci hızını sınırla", false, true, "Bu adım root gerektirir; Shizuku ile yapılamaz.",
+                    tr("Limit CPU speed", "İşlemci hızını sınırla"), false, true, tr("This step requires root; it cannot be done with Shizuku.", "Bu adım root gerektirir; Shizuku ile yapılamaz."),
                 ),
             )
         } else if (cfg.cpuCap && snap.cpuPolicies.isEmpty()) {
-            extra.add(GameStepResult("İşlemci hızını sınırla", false, true, "İşlemci frekans bilgisi okunamadı."))
+            extra.add(GameStepResult(tr("Limit CPU speed", "İşlemci hızını sınırla"), false, true, tr("CPU frequency info could not be read.", "İşlemci frekans bilgisi okunamadı.")))
         }
         if (cfg.backend != GraphicsBackend.Default && snap.angle == null) {
             extra.add(
                 GameStepResult(
-                    "Grafik motoru: ${cfg.backend.label}", false, true,
-                    "Mevcut sürücü ayarı güvenle okunamadı; başka uygulamaların ayarı bozulmasın diye dokunulmadı.",
+                    tr("Graphics engine: ${cfg.backend.label}", "Grafik motoru: ${cfg.backend.label}"), false, true,
+                    tr("The current driver setting could not be read safely; left untouched so other apps' settings are not broken.", "Mevcut sürücü ayarı güvenle okunamadı; başka uygulamaların ayarı bozulmasın diye dokunulmadı."),
                 ),
             )
         } else if (cfg.backend == GraphicsBackend.Angle && snap.angleSupported == false) {
             extra.add(
                 GameStepResult(
-                    "ANGLE desteği", false, true,
-                    "Cihaz ANGLE desteği bildirmiyor; ayar yazıldı ama etkisiz kalabilir.",
+                    tr("ANGLE support", "ANGLE desteği"), false, true,
+                    tr("The device does not report ANGLE support; the setting was written but may have no effect.", "Cihaz ANGLE desteği bildirmiyor; ayar yazıldı ama etkisiz kalabilir."),
                 ),
             )
         }
         if (cfg.dimScreen && snap.brightness == null) {
-            extra.add(GameStepResult("Ekran parlaklığını kıs", false, true, "Mevcut parlaklık okunamadı."))
+            extra.add(GameStepResult(tr("Dim the screen brightness", "Ekran parlaklığını kıs"), false, true, tr("Current brightness could not be read.", "Mevcut parlaklık okunamadı.")))
         }
         val custom = customLines(cfg.customStart)
         if (custom.isNotEmpty()) {
-            results.addAll(runSteps(custom.map { GameStep("Özel komut: ${it.take(40)}", it, optional = true) }))
+            results.addAll(runSteps(custom.map { GameStep(tr("Custom command: ${it.take(40)}", "Özel komut: ${it.take(40)}"), it, optional = true) }))
         }
         if (cfg.autoRevert) {
             results.add(startWatchdog(snap.session, cfg))
@@ -586,10 +587,10 @@ class GameModeController(
      * (başarı uydurulmaz).
      */
     private suspend fun startWatchdog(session: GameSession, cfg: GameModeConfig): GameStepResult {
-        val label = "Oyun kapanınca otomatik geri al"
+        val label = tr("Auto-revert when the game closes", "Oyun kapanınca otomatik geri al")
         val script = buildWatchdogScript(session, guardTempC = cfg.guardTempC)
         if (script.isEmpty()) {
-            return GameStepResult(label, false, true, "Geçersiz paket adı.")
+            return GameStepResult(label, false, true, tr("Invalid package name.", "Geçersiz paket adı."))
         }
         val o = control.shell(label, buildWatchdogLaunch(script))
         delayFn(600)
@@ -598,7 +599,7 @@ class GameModeController(
         if (watchdogAlive != true) {
             return GameStepResult(
                 label, false, true,
-                "İzleyici başlatılamadı; oyun bitince Geri Al'a kendiniz basın.",
+                tr("The watcher could not be started; press Revert yourself when the game ends.", "İzleyici başlatılamadı; oyun bitince Geri Al'a kendiniz basın."),
             )
         }
         return GameStepResult(label, true, true)
@@ -606,9 +607,9 @@ class GameModeController(
 
     /** Her şeyi eski haline getirir. */
     suspend fun stop(): GameRunResult {
-        if (!control.ready) return GameRunResult(emptyList(), note = "Önce tam kontrolü etkinleştirin.")
-        if (busy) return GameRunResult(emptyList(), note = "Başka bir işlem sürüyor.")
-        if (sessionState == null) return GameRunResult(emptyList(), note = "Geri alınacak bir şey yok.")
+        if (!control.ready) return GameRunResult(emptyList(), note = tr("Enable full control first.", "Önce tam kontrolü etkinleştirin."))
+        if (busy) return GameRunResult(emptyList(), note = tr("Another operation is in progress.", "Başka bir işlem sürüyor."))
+        if (sessionState == null) return GameRunResult(emptyList(), note = tr("Nothing to revert.", "Geri alınacak bir şey yok."))
         busy = true
         notifyChanged()
         try {
@@ -627,8 +628,8 @@ class GameModeController(
      * varsayılanları yazar. "Geri alınacak bir şey yok" durumunda bile telefonu düzeltir.
      */
     suspend fun forceReset(): GameRunResult {
-        if (!control.ready) return GameRunResult(emptyList(), note = "Önce tam kontrolü etkinleştirin.")
-        if (busy) return GameRunResult(emptyList(), note = "Başka bir işlem sürüyor.")
+        if (!control.ready) return GameRunResult(emptyList(), note = tr("Enable full control first.", "Önce tam kontrolü etkinleştirin."))
+        if (busy) return GameRunResult(emptyList(), note = tr("Another operation is in progress.", "Başka bir işlem sürüyor."))
         busy = true
         notifyChanged()
         try {
@@ -658,7 +659,7 @@ class GameModeController(
         val results = runSteps(buildRevertSteps(session))
         val endCommands = profiles[session.packageName]?.let { customLines(it.customEnd) } ?: emptyList()
         if (endCommands.isNotEmpty()) {
-            results.addAll(runSteps(endCommands.map { GameStep("Özel komut: ${it.take(40)}", it, optional = true) }))
+            results.addAll(runSteps(endCommands.map { GameStep(tr("Custom command: ${it.take(40)}", "Özel komut: ${it.take(40)}"), it, optional = true) }))
         }
         val result = GameRunResult(results)
         // Yalnızca zorunlu adımlar başarılıysa oturumu kapat; aksi halde "Geri Al" tekrar

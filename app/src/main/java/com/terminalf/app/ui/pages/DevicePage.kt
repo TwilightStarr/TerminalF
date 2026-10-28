@@ -1,5 +1,6 @@
 package com.terminalf.app.ui.pages
 
+import com.terminalf.app.core.tr
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -53,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -84,6 +86,7 @@ import com.terminalf.app.state.setKeepScreenOn
 import com.terminalf.app.ui.components.AppCard
 import com.terminalf.app.ui.components.AppLogo
 import com.terminalf.app.ui.components.EaseOutCubicCurve
+import com.terminalf.app.ui.components.IconChip
 import com.terminalf.app.ui.components.InfoRow
 import com.terminalf.app.ui.components.LocalToaster
 import com.terminalf.app.ui.components.RowDivider
@@ -97,20 +100,29 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-private enum class DeviceSub { Appearance, Settings }
+internal enum class DeviceSub { Appearance, Settings }
+
+/**
+ * Cihaz sayfasının açık alt sayfası. `AppRoot` tutar: dil değişince arayüz baştan çizilir ve
+ * kullanıcı, dili değiştirdiği Ayarlar sayfasında kalır.
+ */
+@Stable
+class DeviceNav {
+    internal var sub by mutableStateOf<DeviceSub?>(null)
+}
 
 /** Anahtar (Switch) renkleri: Flutter `switchTheme` karşılığı. */
 @Composable
 internal fun appSwitchColors(): SwitchColors {
     val c = AppTheme.colors
     return SwitchDefaults.colors(
-        checkedThumbColor = c.bg,
+        checkedThumbColor = c.onBrand,
         checkedTrackColor = c.primary,
         checkedBorderColor = c.primary,
         uncheckedThumbColor = c.muted,
         uncheckedTrackColor = c.surfaceHigh,
         uncheckedBorderColor = c.outline,
-        disabledCheckedThumbColor = c.bg,
+        disabledCheckedThumbColor = c.onBrand,
         disabledCheckedTrackColor = c.primary,
         disabledCheckedBorderColor = c.primary,
         disabledUncheckedThumbColor = c.muted,
@@ -165,7 +177,7 @@ internal fun SubPageFrame(
         ) {
             Box(Modifier.width(56.dp).height(56.dp), contentAlignment = Alignment.Center) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Geri", tint = c.text)
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = tr("Back", "Geri"), tint = c.text)
                 }
             }
             Spacer(Modifier.width(16.dp))
@@ -187,8 +199,13 @@ internal fun SubPageFrame(
  * Görünüm ve Bildirimler sayfaları (Flutter'da `Navigator.push`) burada yerinde alt ekran olarak açılır.
  */
 @Composable
-fun DevicePage(live: LiveStats, settings: AppSettings, notifier: Notifier) {
-    var sub by remember { mutableStateOf<DeviceSub?>(null) }
+fun DevicePage(
+    live: LiveStats,
+    settings: AppSettings,
+    notifier: Notifier,
+    nav: DeviceNav = remember { DeviceNav() },
+) {
+    var sub by nav::sub
     BackHandler(enabled = sub != null) { sub = null }
 
     val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(Motion.d(300), easing = EaseOutCubicCurve)
@@ -316,7 +333,7 @@ private fun DeviceMain(
         }
         val current = container.brightness.current()
         if (current != null) brightness = current.toFloat()
-        toast.show("Parlaklık sistem değerine döndü")
+        toast.show(tr("Brightness restored to the system value", "Parlaklık sistem değerine döndü"))
     }
 
     fun requestNotification() {
@@ -343,7 +360,7 @@ private fun DeviceMain(
             val reading = container.storage.read()
             clearing = false
             storage = reading
-            toast.show("${formatBytes(freed)} temizlendi")
+            toast.show(tr("${formatBytes(freed)} cleared", "${formatBytes(freed)} temizlendi"))
         }
     }
 
@@ -367,25 +384,25 @@ private fun DeviceMain(
             .verticalScroll(rememberScrollState())
             .padding(start = 20.dp, top = 14.dp, end = 20.dp, bottom = 28.dp),
     ) {
-        Text("Cihaz", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-        SectionHeader("Bu Telefon")
+        Text(tr("Device", "Cihaz"), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+        SectionHeader(tr("This Phone", "Bu Telefon"))
         AppCard { PhoneInfo(live = live, device = device) }
 
-        SectionHeader("Ekran ve Ağ")
+        SectionHeader(tr("Display & Network", "Ekran ve Ağ"))
         AppCard {
-            InfoRow(label = "Çözünürlük", value = "$physW × $physH")
+            InfoRow(label = tr("Resolution", "Çözünürlük"), value = "$physW × $physH")
             RowDivider()
-            InfoRow(label = "Yoğunluk", value = "$dpi dpi")
+            InfoRow(label = tr("Density", "Yoğunluk"), value = "$dpi dpi")
             RowDivider()
-            InfoRow(label = "Yenileme hızı", value = if (hz > 0f) "${hz.roundToInt()} Hz" else "Bilinmiyor")
+            InfoRow(label = tr("Refresh rate", "Yenileme hızı"), value = if (hz > 0f) "${hz.roundToInt()} Hz" else tr("Unknown", "Bilinmiyor"))
             RowDivider()
-            InfoRow(label = "Yerel IP", value = ip, copyable = ip != "Bulunamadı" && ip != "…")
+            InfoRow(label = tr("Local IP", "Yerel IP"), value = ip, copyable = ip != tr("Not found", "Bulunamadı") && ip != "…")
         }
 
-        SectionHeader("Ayarlar")
+        SectionHeader(tr("Settings", "Ayarlar"))
         AppCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Ekranı açık tut", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(tr("Keep screen on", "Ekranı açık tut"), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Switch(checked = keepScreenOn, onCheckedChange = { v -> setKeepOn(v) }, colors = appSwitchColors())
             }
             RowDivider()
@@ -393,8 +410,8 @@ private fun DeviceMain(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Brightness6, contentDescription = null, tint = c.muted, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Uygulama parlaklığı", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("%${(brightness * 100f).roundToInt()}", color = c.muted)
+                Text(tr("App brightness", "Uygulama parlaklığı"), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(tr("${(brightness * 100f).roundToInt()}%", "%${(brightness * 100f).roundToInt()}"), color = c.muted)
             }
             Slider(
                 value = brightness.coerceIn(0f, 1f),
@@ -412,14 +429,14 @@ private fun DeviceMain(
             )
             Row {
                 SoftButton(
-                    label = "Sisteme Sıfırla",
+                    label = tr("Reset to System", "Sisteme Sıfırla"),
                     icon = Icons.Rounded.RestartAlt,
                     onClick = { resetBrightness() },
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(10.dp))
                 SoftButton(
-                    label = "Titreşim Testi",
+                    label = tr("Vibration Test", "Titreşim Testi"),
                     icon = Icons.Rounded.Vibration,
                     onClick = { vibrate(ctx) },
                     modifier = Modifier.weight(1f),
@@ -428,17 +445,19 @@ private fun DeviceMain(
             Spacer(Modifier.height(14.dp))
             RowDivider()
             NavTile(
-                title = "Görünüm",
-                subtitle = "Tema · logo rengi",
+                title = tr("Appearance", "Görünüm"),
+                subtitle = tr("Theme · colors · logo", "Tema · renkler · logo"),
                 leading = Icons.Rounded.Palette,
+                leadingColor = c.pink,
                 trailing = Icons.Rounded.ChevronRight,
                 onClick = onOpenAppearance,
             )
             RowDivider()
             NavTile(
-                title = "Bildirimler ve Uyarılar",
-                subtitle = "Isınma, pil, depolama uyarıları · eşikler · titreşim",
+                title = tr("Notifications & Alerts", "Bildirimler ve Uyarılar"),
+                subtitle = tr("Heat, battery and storage alerts · thresholds · vibration", "Isınma, pil, depolama uyarıları · eşikler · titreşim"),
                 leading = Icons.Rounded.Notifications,
+                leadingColor = c.yellow,
                 trailing = Icons.Rounded.ChevronRight,
                 onClick = onOpenSettings,
             )
@@ -446,16 +465,16 @@ private fun DeviceMain(
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Bildirim izni", fontWeight = FontWeight.Bold)
+                    Text(tr("Notification permission", "Bildirim izni"), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        if (notificationGranted) "Verildi" else "Verilmedi",
+                        if (notificationGranted) tr("Granted", "Verildi") else tr("Not granted", "Verilmedi"),
                         color = if (notificationGranted) c.good else c.warn,
                         fontSize = 13.sp,
                     )
                 }
                 if (!notificationGranted) {
-                    SoftButton(label = "İzin Ver", onClick = { requestNotification() })
+                    SoftButton(label = tr("Allow", "İzin Ver"), onClick = { requestNotification() })
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -463,24 +482,24 @@ private fun DeviceMain(
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Uygulama önbelleği", fontWeight = FontWeight.Bold)
+                    Text(tr("App cache", "Uygulama önbelleği"), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(2.dp))
                     Text(formatBytes(storage?.cacheBytes ?: 0L), color = c.muted, fontSize = 13.sp)
                 }
                 SoftButton(
-                    label = if (clearing) "Temizleniyor…" else "Temizle",
+                    label = if (clearing) tr("Clearing…", "Temizleniyor…") else tr("Clear", "Temizle"),
                     onClick = if (clearing) null else ({ clearOwnCache() }),
                 )
             }
         }
 
         if (features.isNotEmpty()) {
-            SectionHeader("Sistem Kısayolları")
+            SectionHeader(tr("System Shortcuts", "Sistem Kısayolları"))
             AppCard(padding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)) {
                 features.forEachIndexed { i, feature ->
                     NavTile(
-                        title = feature.title,
-                        subtitle = feature.description,
+                        title = feature.displayTitle,
+                        subtitle = feature.displayDescription,
                         trailing = Icons.Rounded.ChevronRight,
                         onClick = { container.catalog.openFeatureSettings(feature) },
                         horizontalPadding = 16.dp,
@@ -492,12 +511,12 @@ private fun DeviceMain(
         }
 
         if (recommended.isNotEmpty()) {
-            SectionHeader("Önerilen Açık Kaynak Uygulamalar")
+            SectionHeader(tr("Recommended Open-Source Apps", "Önerilen Açık Kaynak Uygulamalar"))
             AppCard(padding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)) {
                 recommended.forEachIndexed { i, app ->
                     NavTile(
                         title = app.name,
-                        subtitle = "${app.description}\n${app.sourceLabel}",
+                        subtitle = "${app.displayDescription}\n${app.sourceLabel}",
                         trailing = Icons.AutoMirrored.Rounded.OpenInNew,
                         trailingSize = 20.dp,
                         onClick = { container.catalog.openUrl(app.url) },
@@ -516,7 +535,7 @@ private fun DeviceMain(
             Spacer(Modifier.height(10.dp))
             Text("TerminalF", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
             Spacer(Modifier.height(2.dp))
-            Text("Sürüm $version", color = c.muted, fontSize = 12.sp)
+            Text(tr("Version $version", "Sürüm $version"), color = c.muted, fontSize = 12.sp)
         }
     }
 }
@@ -530,19 +549,19 @@ private fun PhoneInfo(live: LiveStats, device: DeviceStaticInfo?) {
     val disk = sys.disk
     val uptime = sys.uptime
     Column {
-        InfoRow(label = "Model", value = device?.model ?: "…", copyable = device != null)
+        InfoRow(label = tr("Model", "Model"), value = device?.model ?: "…", copyable = device != null)
         RowDivider()
-        InfoRow(label = "Sistem", value = device?.os ?: "…")
+        InfoRow(label = tr("System", "Sistem"), value = device?.os ?: "…")
         RowDivider()
-        InfoRow(label = "İşlemci mimarisi", value = device?.cpuArch ?: "…")
+        InfoRow(label = tr("CPU architecture", "İşlemci mimarisi"), value = device?.cpuArch ?: "…")
         RowDivider()
-        InfoRow(label = "Çekirdek sayısı", value = if (device != null) "${device.coreCount}" else "…")
+        InfoRow(label = tr("Core count", "Çekirdek sayısı"), value = if (device != null) "${device.coreCount}" else "…")
         RowDivider()
-        InfoRow(label = "Toplam bellek", value = if (mem == null) "—" else formatBytes(mem.totalBytes))
+        InfoRow(label = tr("Total memory", "Toplam bellek"), value = if (mem == null) "—" else formatBytes(mem.totalBytes))
         RowDivider()
-        InfoRow(label = "Toplam depolama", value = if (disk == null) "—" else formatBytes(disk.totalBytes))
+        InfoRow(label = tr("Total storage", "Toplam depolama"), value = if (disk == null) "—" else formatBytes(disk.totalBytes))
         RowDivider()
-        InfoRow(label = "Açık kalma süresi", value = if (uptime == null) "—" else formatDuration(uptime))
+        InfoRow(label = tr("Uptime", "Açık kalma süresi"), value = if (uptime == null) "—" else formatDuration(uptime))
     }
 }
 
@@ -554,6 +573,7 @@ private fun NavTile(
     trailing: ImageVector,
     onClick: () -> Unit,
     leading: ImageVector? = null,
+    leadingColor: androidx.compose.ui.graphics.Color? = null,
     horizontalPadding: androidx.compose.ui.unit.Dp = 0.dp,
     titleSize: androidx.compose.ui.unit.TextUnit = 16.sp,
     trailingSize: androidx.compose.ui.unit.Dp = 24.dp,
@@ -569,10 +589,8 @@ private fun NavTile(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null) {
-            Box(Modifier.width(40.dp), contentAlignment = Alignment.CenterStart) {
-                Icon(leading, contentDescription = null, tint = c.muted)
-            }
-            Spacer(Modifier.width(16.dp))
+            IconChip(icon = leading, color = leadingColor ?: c.primary, size = 40.dp)
+            Spacer(Modifier.width(14.dp))
         }
         Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.Bold, fontSize = titleSize)

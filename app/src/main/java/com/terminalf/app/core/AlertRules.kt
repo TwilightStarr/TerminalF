@@ -61,9 +61,11 @@ fun evaluateAlerts(
         kind = AlertKind.Heat,
         trigger = t?.let { it >= thresholds.temperatureC },
         clear = t?.let { it < thresholds.temperatureC - 3 },
-        title = "Cihaz ısındı",
-        body = "Pil sıcaklığı ${t?.let { fixed(it, 1) }} °C. Ağır uygulamaları kapatıp " +
-            "şarjı ya da ekranı bir süre bırakmak iyi olur.",
+        title = tr("Device is hot", "Cihaz ısındı"),
+        body = tr(
+            "Battery temperature is ${t?.let { fixed(it, 1) }} °C. Close heavy apps and give the device a break from charging or the screen.",
+            "Pil sıcaklığı ${t?.let { fixed(it, 1) }} °C. Ağır uygulamaları kapatıp şarjı ya da ekranı bir süre bırakmak iyi olur.",
+        ),
     )
 
     val sPct = storageUsedRatio?.let { it * 100 }
@@ -71,8 +73,8 @@ fun evaluateAlerts(
         kind = AlertKind.LowStorage,
         trigger = sPct?.let { it >= thresholds.storageUsedPercent },
         clear = sPct?.let { it < thresholds.storageUsedPercent - 2 },
-        title = "Depolama dolmak üzere",
-        body = "Depolama %${sPct?.roundToInt()} dolu. Önbellek temizliği yer açabilir.",
+        title = tr("Storage is almost full", "Depolama dolmak üzere"),
+        body = tr("Storage is ${sPct?.roundToInt()}% full. Clearing caches can free up space.", "Depolama %${sPct?.roundToInt()} dolu. Önbellek temizliği yer açabilir."),
     )
 
     val b = batteryPercent
@@ -80,8 +82,8 @@ fun evaluateAlerts(
         kind = AlertKind.LowBattery,
         trigger = b?.let { !charging && it <= thresholds.batteryPercent },
         clear = b?.let { charging || it >= thresholds.batteryPercent + 3 },
-        title = "Pil azalıyor",
-        body = "Pil %$b. Pil Tasarrufu profilini açmak ömrü uzatır.",
+        title = tr("Battery is low", "Pil azalıyor"),
+        body = tr("Battery is at $b%. Turning on the Battery Saver profile extends battery life.", "Pil %$b. Pil Tasarrufu profilini açmak ömrü uzatır."),
     )
 
     val mPct = memoryUsedRatio?.let { it * 100 }
@@ -89,9 +91,11 @@ fun evaluateAlerts(
         kind = AlertKind.HighMemory,
         trigger = mPct?.let { it >= thresholds.memoryUsedPercent },
         clear = mPct?.let { it < thresholds.memoryUsedPercent - 4 },
-        title = "Bellek dolu",
-        body = "RAM %${mPct?.roundToInt()} dolu. Hızlandır ile arka plan uygulamalarını " +
-            "kapatabilirsiniz.",
+        title = tr("Memory is full", "Bellek dolu"),
+        body = tr(
+            "RAM is ${mPct?.roundToInt()}% full. Use Boost to close background apps.",
+            "RAM %${mPct?.roundToInt()} dolu. Hızlandır ile arka plan uygulamalarını kapatabilirsiniz.",
+        ),
     )
 
     return AlertEvaluation(fire = fire, active = next)

@@ -1,5 +1,6 @@
 package com.terminalf.app.ui.pages
 
+import com.terminalf.app.core.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +59,7 @@ import com.terminalf.app.ui.components.PrimaryButton
 import com.terminalf.app.ui.components.RowDivider
 import com.terminalf.app.ui.components.SectionHeader
 import com.terminalf.app.ui.components.SoftButton
+import com.terminalf.app.ui.components.IconChip
 import com.terminalf.app.ui.components.StatusPill
 import com.terminalf.app.ui.observe
 import com.terminalf.app.ui.sheets.showControlSetup
@@ -65,6 +68,17 @@ import com.terminalf.app.ui.sheets.showOutcome
 import com.terminalf.app.ui.theme.AppTheme
 import com.terminalf.app.ui.theme.faded
 import kotlinx.coroutines.launch
+
+@Composable
+private fun profileColor(key: String): Color {
+    val c = AppTheme.colors
+    return when (key) {
+        "bolt" -> c.orange
+        "battery" -> c.green
+        "shield" -> c.violet
+        else -> c.cyan
+    }
+}
 
 private fun profileIcon(key: String): ImageVector = when (key) {
     "bolt" -> Icons.Rounded.Bolt
@@ -105,9 +119,9 @@ fun OptimizePage(control: ControlController) {
             }
             if (apply && tweak.dangerous) {
                 val ok = dialogs.confirm(
-                    title = tweak.title,
-                    message = "${tweak.description}\n\nBu işlem sistem bileşenlerini etkiler. Geri alınabilir, ama emin misiniz?",
-                    confirmLabel = "Uygula",
+                    title = tweak.displayTitle,
+                    message = tr("${tweak.displayDescription}\n\nThis affects system components. It can be reverted, but are you sure?", "${tweak.displayDescription}\n\nBu işlem sistem bileşenlerini etkiler. Geri alınabilir, ama emin misiniz?"),
+                    confirmLabel = tr("Apply", "Uygula"),
                     danger = true,
                 )
                 if (!ok) return@launch
@@ -131,7 +145,7 @@ fun OptimizePage(control: ControlController) {
                 fontWeight = FontWeight.ExtraBold,
             )
             IconButton(onClick = { scope.launch { sheets.showLogSheet(control) } }) {
-                Icon(Icons.AutoMirrored.Rounded.ReceiptLong, contentDescription = "İşlem günlüğü", tint = c.muted)
+                Icon(Icons.AutoMirrored.Rounded.ReceiptLong, contentDescription = tr("Activity log", "İşlem günlüğü"), tint = c.muted)
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -151,7 +165,7 @@ fun OptimizePage(control: ControlController) {
                 )
             }
         }
-        SectionHeader("Hazır Profiller")
+        SectionHeader(tr("Ready-made Profiles", "Hazır Profiller"))
         for (profile in kProfiles) {
             ProfileCard(
                 profile = profile,
@@ -161,7 +175,7 @@ fun OptimizePage(control: ControlController) {
             )
             Spacer(Modifier.height(12.dp))
         }
-        SectionHeader("Tüm Ayarlar")
+        SectionHeader(tr("All Settings", "Tüm Ayarlar"))
         for (category in TweakCategory.values()) {
             val items = control.tweaks.filter { it.category == category }
             if (items.isEmpty()) continue
@@ -221,9 +235,9 @@ private fun AccessCard(control: ControlController, onClick: () -> Unit) {
                 Spacer(Modifier.height(2.dp))
                 Text(
                     if (ready) {
-                        "Profiller ve ayarlar kullanıma hazır."
+                        tr("Profiles and settings are ready to use.", "Profiller ve ayarlar kullanıma hazır.")
                     } else {
-                        "Optimizasyon için tek seferlik kurulum gerekiyor. Dokunun."
+                        tr("A one-time setup is needed for optimization. Tap here.", "Optimizasyon için tek seferlik kurulum gerekiyor. Dokunun.")
                     },
                     color = c.muted,
                     fontSize = 13.sp,
@@ -246,22 +260,15 @@ private fun ProfileCard(
     val total = control.toggleCount(profile)
     val active = control.activeCount(profile)
     val allOn = profile.reversible && total > 0 && active == total
-    AppCard {
+    val accent = profileColor(profile.iconKey)
+    AppCard(borderColor = accent.faded(0.25f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(c.brand),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(profileIcon(profile.iconKey), contentDescription = null, tint = c.bg)
-            }
+            IconChip(icon = profileIcon(profile.iconKey), color = accent, size = 44.dp)
             Spacer(Modifier.width(12.dp))
             Text(profile.title, modifier = Modifier.weight(1f), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
             if (control.ready && profile.reversible && total > 0) {
                 StatusPill(
-                    label = if (allOn) "Etkin" else "$active/$total açık",
+                    label = if (allOn) tr("Active", "Etkin") else tr("$active/$total on", "$active/$total açık"),
                     color = if (allOn) c.good else c.muted,
                 )
             }
@@ -271,15 +278,16 @@ private fun ProfileCard(
         Spacer(Modifier.height(14.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             PrimaryButton(
-                label = if (profile.reversible) (if (allOn) "Yeniden Uygula" else "Uygula") else "Çalıştır",
+                label = if (profile.reversible) (if (allOn) tr("Re-apply", "Yeniden Uygula") else tr("Apply", "Uygula")) else tr("Run", "Çalıştır"),
                 icon = Icons.Rounded.PlayArrow,
                 onClick = if (control.busy) null else onApply,
                 modifier = Modifier.weight(1f),
+                color = accent,
             )
             if (profile.reversible) {
                 Spacer(Modifier.width(10.dp))
                 SoftButton(
-                    label = "Geri Al",
+                    label = tr("Revert", "Geri Al"),
                     icon = Icons.AutoMirrored.Rounded.Undo,
                     onClick = if (control.busy) null else onRevert,
                 )
@@ -305,10 +313,10 @@ private fun TweakRow(
         horizontalArrangement = Arrangement.Start,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(tweak.title, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+            Text(tweak.displayTitle, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
             Spacer(Modifier.height(3.dp))
             Text(
-                tweak.description,
+                tweak.displayDescription,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 color = c.muted,
@@ -317,7 +325,7 @@ private fun TweakRow(
             )
             if (tweak.isToggle && state == TweakState.Unknown) {
                 Spacer(Modifier.height(4.dp))
-                Text("Durum okunamadı", color = c.warn, fontSize = 12.sp)
+                Text(tr("Status unavailable", "Durum okunamadı"), color = c.warn, fontSize = 12.sp)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -331,7 +339,7 @@ private fun TweakRow(
                 colors = appSwitchColors(),
             )
         } else {
-            SoftButton(label = "Çalıştır", onClick = if (locked) null else ({ onChanged(true) }))
+            SoftButton(label = tr("Run", "Çalıştır"), onClick = if (locked) null else ({ onChanged(true) }))
         }
     }
 }

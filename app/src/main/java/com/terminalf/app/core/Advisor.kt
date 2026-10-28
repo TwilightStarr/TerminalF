@@ -41,10 +41,10 @@ fun computeHealthScore(
 }
 
 fun healthLabel(score: Int): String = when {
-    score >= 85 -> "Mükemmel"
-    score >= 70 -> "İyi"
-    score >= 45 -> "Dikkat gerekiyor"
-    else -> "Kritik"
+    score >= 85 -> tr("Excellent", "Mükemmel")
+    score >= 70 -> tr("Good", "İyi")
+    score >= 45 -> tr("Needs attention", "Dikkat gerekiyor")
+    else -> tr("Critical", "Kritik")
 }
 
 private fun pct(ratio: Double): String = "%${(ratio * 100).roundToInt()}"
@@ -63,55 +63,55 @@ fun buildAdvice(
     if (temperatureCelsius != null && temperatureCelsius >= 42) {
         out.add(
             Advice(
-                title = "Cihaz ısınıyor",
-                detail = "Pil sıcaklığı ${fixed(temperatureCelsius, 1)}°C. Arka plan uygulamalarını kapatmak yardımcı olur.",
+                title = tr("Device is heating up", "Cihaz ısınıyor"),
+                detail = tr("Battery temperature is ${fixed(temperatureCelsius, 1)}°C. Closing background apps helps.", "Pil sıcaklığı ${fixed(temperatureCelsius, 1)}°C. Arka plan uygulamalarını kapatmak yardımcı olur."),
                 level = if (temperatureCelsius >= 45) AdviceLevel.Critical else AdviceLevel.Warning,
                 action = AdviceAction.CoolDown,
-                actionLabel = "Soğut",
+                actionLabel = tr("Cool down", "Soğut"),
             ),
         )
     }
     if (ramUsedRatio != null && ramUsedRatio >= 0.8) {
         out.add(
             Advice(
-                title = "Bellek dolu (${pct(ramUsedRatio)})",
-                detail = "Arka plandaki uygulamalar belleği tutuyor. Temizlemek cihazı hızlandırır.",
+                title = tr("Memory is full (${pct(ramUsedRatio)})", "Bellek dolu (${pct(ramUsedRatio)})"),
+                detail = tr("Background apps are holding memory. Clearing it speeds up the device.", "Arka plandaki uygulamalar belleği tutuyor. Temizlemek cihazı hızlandırır."),
                 level = if (ramUsedRatio >= 0.9) AdviceLevel.Critical else AdviceLevel.Warning,
                 action = AdviceAction.FreeMemory,
-                actionLabel = "Hızlandır",
+                actionLabel = tr("Boost", "Hızlandır"),
             ),
         )
     }
     if (storageUsedRatio != null && storageUsedRatio >= 0.85) {
         out.add(
             Advice(
-                title = "Depolama dolmak üzere (${pct(storageUsedRatio)})",
-                detail = "Önbellekleri temizleyerek yer açabilirsiniz.",
+                title = tr("Storage is almost full (${pct(storageUsedRatio)})", "Depolama dolmak üzere (${pct(storageUsedRatio)})"),
+                detail = tr("You can free up space by clearing caches.", "Önbellekleri temizleyerek yer açabilirsiniz."),
                 level = if (storageUsedRatio >= 0.95) AdviceLevel.Critical else AdviceLevel.Warning,
                 action = AdviceAction.CleanStorage,
-                actionLabel = "Temizle",
+                actionLabel = tr("Clean", "Temizle"),
             ),
         )
     }
     if (batteryPercent != null && batteryPercent <= 20 && !charging) {
         out.add(
             Advice(
-                title = "Pil azalıyor (%$batteryPercent)",
-                detail = "Pil Tasarrufu profili ekranı ve arka plan işlerini kısıtlar.",
+                title = tr("Battery is low ($batteryPercent%)", "Pil azalıyor (%$batteryPercent)"),
+                detail = tr("The Battery Saver profile limits the screen and background work.", "Pil Tasarrufu profili ekranı ve arka plan işlerini kısıtlar."),
                 level = if (batteryPercent <= 10) AdviceLevel.Critical else AdviceLevel.Warning,
                 action = AdviceAction.SaveBattery,
-                actionLabel = "Tasarruf",
+                actionLabel = tr("Save", "Tasarruf"),
             ),
         )
     }
     if (!controlReady) {
         out.add(
             Advice(
-                title = "Tam kontrol kapalı",
-                detail = "Tek dokunuşla kurulumu tamamlayın; optimizasyon ve uygulama yönetimi açılır.",
+                title = tr("Full control is off", "Tam kontrol kapalı"),
+                detail = tr("Finish setup with one tap to unlock optimization and app management.", "Tek dokunuşla kurulumu tamamlayın; optimizasyon ve uygulama yönetimi açılır."),
                 level = AdviceLevel.Info,
                 action = AdviceAction.EnableControl,
-                actionLabel = "Etkinleştir",
+                actionLabel = tr("Enable", "Etkinleştir"),
             ),
         )
     }

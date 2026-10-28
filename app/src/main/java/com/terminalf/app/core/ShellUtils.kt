@@ -110,13 +110,13 @@ fun outputLooksLikeFailure(output: String): Boolean = failurePattern.containsMat
 /** Sonuç başarısızsa kullanıcıya gösterilecek açıklama, başarılıysa `null`. */
 fun failureReason(result: ShellResult): String? {
     if (result.failedByExitCode) {
-        return "komut hata verdi (çıkış kodu ${result.exitCode})"
+        return tr("command failed (exit code ${result.exitCode})", "komut hata verdi (çıkış kodu ${result.exitCode})")
     }
     if (outputLooksLikeFailure(result.output)) {
         return if (result.exitCodeKnown) {
-            "çıkış kodu 0 ama çıktı hata içeriyor"
+            tr("exit code 0 but the output contains an error", "çıkış kodu 0 ama çıktı hata içeriyor")
         } else {
-            "çıktı hata içeriyor (çıkış kodu alınamadı)"
+            tr("the output contains an error (exit code unavailable)", "çıktı hata içeriyor (çıkış kodu alınamadı)")
         }
     }
     return null

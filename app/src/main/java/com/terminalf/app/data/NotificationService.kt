@@ -1,5 +1,6 @@
 package com.terminalf.app.data
 
+import com.terminalf.app.core.tr
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -42,13 +43,13 @@ class NotificationService(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val nm = appContext.getSystemService(NotificationManager::class.java)
                 nm.createNotificationChannel(
-                    NotificationChannel(TASK_CHANNEL_ID, "İşlem sonuçları", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                        description = "Optimizasyon ve temizlik işlemleri bittiğinde bildirir."
+                    NotificationChannel(TASK_CHANNEL_ID, tr("Task results", "İşlem sonuçları"), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                        description = tr("Notifies you when optimization and cleanup tasks finish.", "Optimizasyon ve temizlik işlemleri bittiğinde bildirir.")
                     },
                 )
                 nm.createNotificationChannel(
-                    NotificationChannel(ALERT_CHANNEL_ID, "Sağlık uyarıları", NotificationManager.IMPORTANCE_HIGH).apply {
-                        description = "Isınma, düşük pil, dolu depolama ve bellek uyarıları."
+                    NotificationChannel(ALERT_CHANNEL_ID, tr("Health alerts", "Sağlık uyarıları"), NotificationManager.IMPORTANCE_HIGH).apply {
+                        description = tr("Overheating, low battery, full storage and memory alerts.", "Isınma, düşük pil, dolu depolama ve bellek uyarıları.")
                     },
                 )
             }
@@ -100,7 +101,7 @@ class NotificationService(
     }
 
     override suspend fun showTest() {
-        show(2, "Bildirimler çalışıyor", "TerminalF bu cihazda bildirim gönderebiliyor.", TASK_CHANNEL_ID, important = false)
+        show(2, tr("Notifications are working", "Bildirimler çalışıyor"), tr("TerminalF can send notifications on this device.", "TerminalF bu cihazda bildirim gönderebiliyor."), TASK_CHANNEL_ID, important = false)
     }
 
     private suspend fun show(id: Int, title: String, body: String, channelId: String, important: Boolean) {

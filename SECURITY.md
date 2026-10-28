@@ -1,12 +1,21 @@
-# Güvenlik politikası
+# Security policy
 
-## Açık bildirme
+## Reporting a vulnerability
 
-Bir güvenlik açığı bulduysanız lütfen herkese açık issue **açmayın**. GitHub'da bu deponun **Security > Report a vulnerability** (özel güvenlik bildirimi) özelliğini kullanın.
+If you find a security issue, please **do not** open a public issue. Use GitHub's **Security > Report a vulnerability**
+(private security advisory) feature on this repository.
 
-## Tasarım ilkeleri
+## Design principles
 
-- Ağa veri gönderilmez; telemetri yoktur.
-- Kabuğa verilen paket adları doğrulanır (komut enjeksiyonu engeli).
-- Sistem için kritik paketler ve uygulamanın kendisi dondurulamaz/kaldırılamaz.
-- Yetki (root/Shizuku) kullanıcı tarafından açıkça verilir; hazır olma gerçek bir komutla doğrulanır.
+- No data is sent over the network; there is no telemetry.
+- Package names passed to the shell are validated (command-injection guard).
+- System-critical packages and the app itself cannot be frozen or removed.
+- Privileges (root/Shizuku) are granted explicitly by the user; readiness is verified with a real command.
+
+---
+
+## Güvenlik politikası (Türkçe)
+
+Bir açık bulduysanız herkese açık issue açmayın; GitHub'da **Security > Report a vulnerability** özelliğini kullanın.
+Ağa veri gönderilmez, telemetri yoktur; kabuğa verilen paket adları doğrulanır; kritik paketler korunur; yetki
+kullanıcı tarafından açıkça verilir.

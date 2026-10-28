@@ -1,10 +1,17 @@
 package com.terminalf.app.core
 
 /** Bir tweak'in cihazdaki durumu. */
-enum class TweakState(val label: String) {
-    On("AÇIK"),
-    Off("KAPALI"),
-    Unknown("BİLİNMİYOR"),
+enum class TweakState {
+    On,
+    Off,
+    Unknown;
+
+    val label: String
+        get() = when (this) {
+            On -> tr("ON", "AÇIK")
+            Off -> tr("OFF", "KAPALI")
+            Unknown -> tr("UNKNOWN", "BİLİNMİYOR")
+        }
 }
 
 /**

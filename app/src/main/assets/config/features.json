@@ -2,31 +2,41 @@
   {
     "id": "feat_developer",
     "title": "Geliştirici Seçenekleri",
+    "titleEn": "Developer Options",
     "description": "USB hata ayıklama, GPU render önizleme vb. gelişmiş ayarlar.",
+    "descriptionEn": "USB debugging, GPU rendering preview and other advanced settings.",
     "settingsType": "developer"
   },
   {
     "id": "feat_battery_optimization",
     "title": "Pil Optimizasyonu",
+    "titleEn": "Battery Optimization",
     "description": "Uygulama bazlı pil optimizasyonu istisnalarını yönetir.",
+    "descriptionEn": "Manages per-app battery optimization exceptions.",
     "settingsType": "batteryOptimization"
   },
   {
     "id": "feat_location",
     "title": "Konum Ayarları",
+    "titleEn": "Location Settings",
     "description": "Konum servislerini ve hassasiyet modunu yönetir.",
+    "descriptionEn": "Manages location services and accuracy mode.",
     "settingsType": "location"
   },
   {
     "id": "feat_internal_storage",
     "title": "Depolama Ayarları",
+    "titleEn": "Storage Settings",
     "description": "Cihaz depolama alanı kullanımını gösterir.",
+    "descriptionEn": "Shows how device storage is being used.",
     "settingsType": "internalStorage"
   },
   {
     "id": "feat_accessibility",
     "title": "Erişilebilirlik",
+    "titleEn": "Accessibility",
     "description": "Erişilebilirlik servislerini yönetir.",
+    "descriptionEn": "Manages accessibility services.",
     "settingsType": "accessibility"
   }
 ]

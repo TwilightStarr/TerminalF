@@ -16,14 +16,19 @@ fun suggestSettings(stats: SessionStats?, config: GameModeConfig): ScaleSuggesti
         if (i < kScaleSteps.size - 1) {
             return ScaleSuggestion(
                 kScaleSteps[i + 1],
-                "Son oyunda telefon ısındı. Bir kademe daha düşük çözünürlük ısıyı düşürür.",
+                tr(
+                    "The phone got hot in the last game. One step lower resolution reduces heat.",
+                    "Son oyunda telefon ısındı. Bir kademe daha düşük çözünürlük ısıyı düşürür.",
+                ),
             )
         }
         if (config.targetFps > 30) {
             return ScaleSuggestion(
                 0.4,
-                "Son oyunda telefon ısındı ve çözünürlük zaten en düşükte. Kare hızını 30 FPS'e " +
-                    "çekmek ısıyı daha çok düşürür.",
+                tr(
+                    "The phone got hot in the last game and the resolution is already at its lowest. Capping the frame rate at 30 FPS reduces heat further.",
+                    "Son oyunda telefon ısındı ve çözünürlük zaten en düşükte. Kare hızını 30 FPS'e çekmek ısıyı daha çok düşürür.",
+                ),
                 fps = 30,
             )
         }
@@ -32,7 +37,10 @@ fun suggestSettings(stats: SessionStats?, config: GameModeConfig): ScaleSuggesti
     if (avg >= config.targetFps * 0.9 && i > 0) {
         return ScaleSuggestion(
             kScaleSteps[i - 1],
-            "Son oyunda ısınma olmadı ve hedef FPS tutuldu. Bir kademe daha net görüntü deneyebilirsiniz.",
+            tr(
+                "The last game did not overheat and the target FPS was met. You can try one step sharper image.",
+                "Son oyunda ısınma olmadı ve hedef FPS tutuldu. Bir kademe daha net görüntü deneyebilirsiniz.",
+            ),
         )
     }
     return null

@@ -13,6 +13,8 @@ private fun cmds(c: GameModeConfig, size: PixelSize? = null, density: Int? = nul
     buildApplySteps(c, size, density, brightness, cpu)
 
 class WmParsersTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun size() {
         val s = parseWmSize("Physical size: 1220x2712\nOverride size: 813x1808\n")!!
         assertEquals("1220x2712", s.physical.toString())
@@ -57,6 +59,8 @@ class WmParsersTest {
 }
 
 class GameCommandsTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun defaults() {
         val c = cmds(GameModeConfig()).map { it.command }
         assertTrue("am kill-all" in c)
@@ -101,6 +105,8 @@ class GameCommandsTest {
 }
 
 class GameRevertTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     private fun session(screen: Boolean = false) = GameSession(
         packageName = DEF,
         settings = mapOf(
@@ -169,6 +175,8 @@ class GameRevertTest {
 }
 
 class GamePresetsTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun defaults() {
         val c = GameModeConfig()
         assertFalse(c.animationsOff)
@@ -239,6 +247,8 @@ class GamePresetsTest {
 }
 
 class GameBrightnessCpuTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     private val policies = listOf(
         CpuPolicy("policy0", 2000000, 2000000),
         CpuPolicy("policy4", 2850000, 2850000),
@@ -311,6 +321,8 @@ class GameBrightnessCpuTest {
 }
 
 class AnimationHealTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun zeroOrMissingBecomesDefault() {
         assertEquals("1.0", healAnimationValue(null))
         assertEquals("1.0", healAnimationValue("0"))
@@ -328,6 +340,8 @@ class AnimationHealTest {
 }
 
 class GamePowerTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun coolProfile() {
         val c = cmds(GameModeConfig(powerProfile = GamePower.Battery)).map { it.command }
         assertTrue(c.any { it.startsWith("cmd game set --mode 3 ") })

@@ -21,18 +21,18 @@ fun formatBytes(bytes: Number): String {
 /** Bir süreyi "1 sa 24 dk" / "42 dk" / "< 1 dk" biçimine çevirir (pil kalan-süre tahmini için). */
 fun formatDuration(d: Duration): String {
     val totalMinutes = d.inWholeMinutes
-    if (totalMinutes < 1) return "< 1 dk"
+    if (totalMinutes < 1) return tr("< 1 min", "< 1 dk")
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
-    if (hours <= 0) return "$minutes dk"
-    if (minutes == 0L) return "$hours sa"
-    return "$hours sa $minutes dk"
+    if (hours <= 0) return tr("$minutes min", "$minutes dk")
+    if (minutes == 0L) return tr("$hours h", "$hours sa")
+    return tr("$hours h $minutes min", "$hours sa $minutes dk")
 }
 
 /** Saniyeyi "42 sn" / "7 dk" / "1 sa 5 dk" biçimine çevirir (oyun oturumu süresi). */
 fun formatSeconds(seconds: Int): String {
-    if (seconds < 60) return "$seconds sn"
+    if (seconds < 60) return tr("$seconds s", "$seconds sn")
     val m = seconds / 60
-    if (m < 60) return "$m dk"
-    return "${m / 60} sa ${m % 60} dk"
+    if (m < 60) return tr("$m min", "$m dk")
+    return tr("${m / 60} h ${m % 60} min", "${m / 60} sa ${m % 60} dk")
 }

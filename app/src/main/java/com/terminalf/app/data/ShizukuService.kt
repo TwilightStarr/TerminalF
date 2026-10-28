@@ -1,5 +1,6 @@
 package com.terminalf.app.data
 
+import com.terminalf.app.core.tr
 import android.content.ComponentName
 import android.content.Context
 import android.content.ServiceConnection
@@ -136,7 +137,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
     override suspend fun probe(): ShizukuProbe = lock.withLock {
         identity = null
         if (!isRunning()) {
-            return@withLock ShizukuProbe(running = false, permitted = false, error = "Shizuku servisi çalışmıyor.")
+            return@withLock ShizukuProbe(running = false, permitted = false, error = tr("The Shizuku service is not running.", "Shizuku servisi çalışmıyor."))
         }
         val preV11 = try {
             Shizuku.isPreV11()
@@ -147,11 +148,11 @@ class ShizukuService(context: Context) : ShizukuAccess {
             return@withLock ShizukuProbe(
                 running = true,
                 permitted = false,
-                error = "Shizuku sürümü çok eski; Shizuku'yu güncelleyin.",
+                error = tr("The Shizuku version is too old; please update Shizuku.", "Shizuku sürümü çok eski; Shizuku'yu güncelleyin."),
             )
         }
         if (!hasPermission()) {
-            return@withLock ShizukuProbe(running = true, permitted = false, error = "Shizuku izni verilmedi.")
+            return@withLock ShizukuProbe(running = true, permitted = false, error = tr("Shizuku permission was not granted.", "Shizuku izni verilmedi."))
         }
         try {
             // Yeniden denetim: önceki hızlı-hata kaydı silinir, iki yol da yeniden denenir.
@@ -168,8 +169,8 @@ class ShizukuService(context: Context) : ShizukuAccess {
                 ShizukuProbe(
                     running = true,
                     permitted = true,
-                    error = "Test komutu (id) beklenen çıktıyı döndürmedi" +
-                        (if (short.isEmpty()) " (boş yanıt)." else " (yanıt: $short)."),
+                    error = tr("The test command (id) did not return the expected output", "Test komutu (id) beklenen çıktıyı döndürmedi") +
+                        (if (short.isEmpty()) tr(" (empty response).", " (boş yanıt).") else tr(" (response: $short).", " (yanıt: $short).")),
                 )
             }
         } catch (e: CancellationException) {
@@ -178,7 +179,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
             ShizukuProbe(
                 running = true,
                 permitted = true,
-                error = "Test komutu (id) çalıştırılamadı: ${e.message ?: e.javaClass.simpleName}",
+                error = tr("The test command (id) could not be run: ${e.message ?: e.javaClass.simpleName}", "Test komutu (id) çalıştırılamadı: ${e.message ?: e.javaClass.simpleName}"),
             )
         }
     }
@@ -190,7 +191,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
     override suspend fun exec(command: String): ShellResult {
         if (identity == null) {
             val p = probe()
-            if (!p.ready) throw ShizukuUnavailableException(p.error ?: "Shizuku hazır değil.")
+            if (!p.ready) throw ShizukuUnavailableException(p.error ?: tr("Shizuku is not ready.", "Shizuku hazır değil."))
         }
         val raw = try {
             run(command, 60)
@@ -201,7 +202,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
         } catch (e: Exception) {
             service = null
             identity = null
-            throw ShizukuUnavailableException("Shizuku komutu çalıştıramadı: ${e.message ?: e.javaClass.simpleName}")
+            throw ShizukuUnavailableException(tr("Shizuku could not run the command: ${e.message ?: e.javaClass.simpleName}", "Shizuku komutu çalıştıramadı: ${e.message ?: e.javaClass.simpleName}"))
         }
         return parseWrappedOutput(raw)
     }
@@ -245,7 +246,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
                 } catch (e2: CancellationException) {
                     throw e2
                 } catch (e2: Exception) {
-                    val why = "${e.message ?: e.javaClass.simpleName}; yedek yol: ${e2.message ?: e2.javaClass.simpleName}"
+                    val why = tr("${e.message ?: e.javaClass.simpleName}; fallback path: ${e2.message ?: e2.javaClass.simpleName}", "${e.message ?: e.javaClass.simpleName}; yedek yol: ${e2.message ?: e2.javaClass.simpleName}")
                     lastFailure = System.currentTimeMillis() to why
                     throw ShizukuUnavailableException(why)
                 }
@@ -266,11 +267,11 @@ class ShizukuService(context: Context) : ShizukuAccess {
     /** `Shizuku.newProcess` (13.x'te gizli) ile komutu Shizuku sunucusunda çalıştırır. */
     private suspend fun runRemote(command: String, timeoutSeconds: Int): String {
         val method = newProcessMethod
-            ?: throw ShizukuUnavailableException("Shizuku doğrudan süreç yolu bu sürümde yok")
+            ?: throw ShizukuUnavailableException(tr("The Shizuku direct process path is not available in this version", "Shizuku doğrudan süreç yolu bu sürümde yok"))
         val process = try {
             method.invoke(null, arrayOf("sh", "-c", wrapForShell(command)), null, null) as Process
         } catch (e: java.lang.reflect.InvocationTargetException) {
-            throw ShizukuUnavailableException("Shizuku süreci başlatamadı: ${(e.cause ?: e).message ?: "bilinmeyen hata"}")
+            throw ShizukuUnavailableException(tr("Shizuku could not start the process: ${(e.cause ?: e).message ?: "unknown error"}", "Shizuku süreci başlatamadı: ${(e.cause ?: e).message ?: "bilinmeyen hata"}"))
         }
         val out = ProcessRunner.runExisting(process, (timeoutSeconds + 5) * 1000L)
         return out.stdout + (if (out.stderr.isNotBlank()) "\n" + out.stderr else "")
@@ -300,7 +301,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
             call.cancel()
             service = null
             identity = null
-            throw ShizukuUnavailableException("Komut servisi $timeoutSeconds sn içinde yanıt vermedi.")
+            throw ShizukuUnavailableException(tr("The command service did not respond within $timeoutSeconds s.", "Komut servisi $timeoutSeconds sn içinde yanıt vermedi."))
         }
         return result
     }
@@ -316,12 +317,12 @@ class ShizukuService(context: Context) : ShizukuAccess {
             -1
         }
         if (version in 0..9) {
-            throw ShizukuUnavailableException("Shizuku sürümü çok eski (API $version); Shizuku'yu güncelleyin.")
+            throw ShizukuUnavailableException(tr("The Shizuku version is too old (API $version); please update Shizuku.", "Shizuku sürümü çok eski (API $version); Shizuku'yu güncelleyin."))
         }
 
         // Bir kez yeniden dener: ilk bağlanma, Shizuku'nun süreci ilk kez başlatması yüzünden
         // yavaş olabilir. Her denemenin gerçek nedeni ayrıca kaydedilir.
-        var lastReason = "yanıt gelmedi"
+        var lastReason = tr("no response", "yanıt gelmedi")
         for (attempt in 1..1) {
             unbind()
             val outcome = bindOnce(BIND_TIMEOUT_MS)
@@ -331,7 +332,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
             if (outcome.fatal) break
         }
         unbind()
-        throw ShizukuUnavailableException("Shizuku komut servisi başlatılamadı ($lastReason).")
+        throw ShizukuUnavailableException(tr("The Shizuku command service could not be started ($lastReason).", "Shizuku komut servisi başlatılamadı ($lastReason)."))
     }
 
     private class BindOutcome(val service: IShellService?, val reason: String, val fatal: Boolean = false)
@@ -349,7 +350,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
                                 service = s
                                 if (cont.isActive) cont.resume(s)
                             } else {
-                                failure = "servis bağlandı ancak yanıt vermiyor"
+                                failure = tr("the service connected but is not responding", "servis bağlandı ancak yanıt vermiyor")
                                 if (cont.isActive) cont.resume(null)
                             }
                         }
@@ -360,12 +361,12 @@ class ShizukuService(context: Context) : ShizukuAccess {
                         }
 
                         override fun onNullBinding(name: ComponentName?) {
-                            failure = "servis boş bağlantı döndürdü"
+                            failure = tr("the service returned a null binding", "servis boş bağlantı döndürdü")
                             if (cont.isActive) cont.resume(null)
                         }
 
                         override fun onBindingDied(name: ComponentName?) {
-                            failure = "servis süreci başlarken öldü"
+                            failure = tr("the service process died while starting", "servis süreci başlarken öldü")
                             service = null
                             if (cont.isActive) cont.resume(null)
                         }
@@ -375,7 +376,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
                     try {
                         Shizuku.bindUserService(args, conn)
                     } catch (e: Throwable) {
-                        failure = "bağlanma hatası: ${e.javaClass.simpleName}" +
+                        failure = tr("binding error: ${e.javaClass.simpleName}", "bağlanma hatası: ${e.javaClass.simpleName}") +
                             (e.message?.let { ": $it" } ?: "")
                         fatal = true
                         if (cont.isActive) cont.resume(null)
@@ -386,7 +387,7 @@ class ShizukuService(context: Context) : ShizukuAccess {
         return when {
             bound != null -> BindOutcome(bound, "")
             failure != null -> BindOutcome(null, failure!!, fatal)
-            else -> BindOutcome(null, "${timeoutMs / 1000} sn içinde yanıt gelmedi; Shizuku'yu yeniden başlatıp tekrar deneyin")
+            else -> BindOutcome(null, tr("No response within ${timeoutMs / 1000} s; restart Shizuku and try again", "${timeoutMs / 1000} sn içinde yanıt gelmedi; Shizuku'yu yeniden başlatıp tekrar deneyin"))
         }
     }
 

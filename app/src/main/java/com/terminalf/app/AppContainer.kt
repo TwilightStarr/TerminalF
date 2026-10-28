@@ -94,4 +94,4 @@ class AppContainer(context: Context) {
     }
 }
 
-val LocalContainer = staticCompositionLocalOf<AppContainer> { error("AppContainer sağlanmadı") }
+val LocalContainer = staticCompositionLocalOf<AppContainer> { error("AppContainer not provided") }

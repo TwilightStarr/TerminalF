@@ -69,7 +69,7 @@ class ShellUserService() : IShellService.Stub() {
             val raw = synchronized(out) { out.toString("UTF-8") }
             val parsed = parseWrappedOutput(raw)
             val text = if (parsed.output.length > MAX_CHARS) {
-                parsed.output.substring(0, MAX_CHARS) + "\n…(çıktı kısaltıldı)"
+                parsed.output.substring(0, MAX_CHARS) + "\n…(output truncated)"
             } else {
                 parsed.output
             }

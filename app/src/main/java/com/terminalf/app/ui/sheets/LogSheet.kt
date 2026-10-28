@@ -1,5 +1,6 @@
 package com.terminalf.app.ui.sheets
 
+import com.terminalf.app.core.tr
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +52,7 @@ private fun LogSheetBody(control: ControlController) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "İşlem Günlüğü",
+                tr("Activity Log", "İşlem Günlüğü"),
                 modifier = Modifier.weight(1f),
                 color = c.text,
                 fontSize = 20.sp,
@@ -65,12 +66,12 @@ private fun LogSheetBody(control: ControlController) {
                     disabledContentColor = c.muted.faded(0.5f),
                 ),
             ) {
-                Text("Temizle")
+                Text(tr("Clear", "Temizle"))
             }
         }
         if (lines.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("Henüz bir işlem yapılmadı.", color = c.muted)
+                Text(tr("No activity yet.", "Henüz bir işlem yapılmadı."), color = c.muted)
             }
         } else {
             LazyColumn(

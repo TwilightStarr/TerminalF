@@ -48,6 +48,7 @@ import com.terminalf.app.LocalContainer
 import com.terminalf.app.data.InstalledApp
 import com.terminalf.app.state.SavedGame
 import com.terminalf.app.ui.theme.AppTheme
+import com.terminalf.app.core.tr
 
 /**
  * Yüklü uygulamalardan oyun seçme sayfasının içeriği (Flutter `_GamePicker`). `existing`, zaten
@@ -90,7 +91,7 @@ internal fun GamePickerSheet(
                 .padding(start = 22.dp, top = 2.dp, end = 22.dp, bottom = 8.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
-            Text("Oyun seç", color = c.text, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+            Text(tr("Choose a game", "Oyun seç"), color = c.text, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
         }
 
         val fieldShape = RoundedCornerShape(14.dp)
@@ -126,7 +127,7 @@ internal fun GamePickerSheet(
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         if (query.isEmpty()) {
-                            Text("Oyun ara", color = c.muted, fontSize = 16.sp, maxLines = 1)
+                            Text(tr("Search games", "Oyun ara"), color = c.muted, fontSize = 16.sp, maxLines = 1)
                         }
                         inner()
                     }
@@ -141,7 +142,7 @@ internal fun GamePickerSheet(
                 }
             } else if (list.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Uygulama bulunamadı.", color = c.muted)
+                    Text(tr("No apps found.", "Uygulama bulunamadı."), color = c.muted)
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {

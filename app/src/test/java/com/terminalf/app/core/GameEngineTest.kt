@@ -18,6 +18,8 @@ private fun session(settings: Map<String, String?> = emptyMap(), fixedPerf: Bool
 )
 
 class AngleSelectionTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun addsPackageWhenListsAreEmpty() {
         val m = mergeAngleSelection(AngleSelection(null, null), PKG, "angle")
         assertEquals(PKG, m.pkgs)
@@ -56,6 +58,8 @@ class AngleSelectionTest {
 }
 
 class BackendStepTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun defaultBackendProducesNoStep() {
         assertNull(buildBackendStep(GameModeConfig(packageName = PKG), AngleSelection(null, null)))
     }
@@ -137,6 +141,8 @@ class BackendStepTest {
 }
 
 class FixedPerfTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun appliedOnlyWhenEnabled() {
         assertFalse(buildApplySteps(GameModeConfig(packageName = PKG)).any { it.command == kFixedPerfOn })
         val on = buildApplySteps(GameModeConfig(packageName = PKG, fixedPerf = true))
@@ -158,6 +164,8 @@ class FixedPerfTest {
 }
 
 class CustomValuesTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun autoLockHzPicksPanelMultiple() {
         assertEquals(60, autoLockHz(30))
         assertEquals(90, autoLockHz(45))
@@ -241,6 +249,8 @@ class CustomValuesTest {
 }
 
 class GameKindTest {
+    @get:org.junit.Rule val language = TestLanguage()
+
     @Test fun detection() {
         assertEquals(GameKind.MinecraftBedrock, detectGameKind("com.mojang.minecraftpe"))
         assertEquals(GameKind.MinecraftJava, detectGameKind("net.kdt.pojavlaunch"))

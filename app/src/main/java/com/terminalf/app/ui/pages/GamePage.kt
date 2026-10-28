@@ -1,5 +1,6 @@
 package com.terminalf.app.ui.pages
 
+import com.terminalf.app.core.tr
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -182,26 +183,22 @@ fun GamePage(control: ControlController, game: GameModeController) {
             val cfg = game.config
             if (cfg.method == ResolutionMethod.WholeScreen && cfg.reducesResolution) {
                 val ok = dialogs.confirm(
-                    title = "Tüm ekran çözünürlüğü düşürülecek",
-                    message = "Telefonun tamamı oyun boyunca düşük çözünürlükte çalışır (yazılar bulanık " +
-                        "görünür). Oyun kapanınca kendiliğinden eski haline döner; olmazsa Geri Al'a " +
-                        "basın. Eski değerler kayıtlı olduğu için uygulamayı kapatsanız bile geri alınabilir.",
-                    confirmLabel = "Uygula",
+                    title = tr("The whole screen resolution will be lowered", "Tüm ekran çözünürlüğü düşürülecek"),
+                    message = tr("The whole phone runs at a low resolution while the game is on (text looks blurry). When the game closes it returns to normal by itself; if not, press Revert. The old values are saved, so it can be reverted even if you close the app.", "Telefonun tamamı oyun boyunca düşük çözünürlükte çalışır (yazılar bulanık görünür). Oyun kapanınca kendiliğinden eski haline döner; olmazsa Geri Al'a basın. Eski değerler kayıtlı olduğu için uygulamayı kapatsanız bile geri alınabilir."),
+                    confirmLabel = tr("Apply", "Uygula"),
                 )
                 if (!ok) return@launch
             }
             if (launchGame && cfg.backend != GraphicsBackend.Default && game.isRunning()) {
                 val ok = dialogs.confirm(
-                    title = "Oyun yeniden başlatılacak",
-                    message = "Grafik motoru değişikliği oyun açılırken geçerli olur. Oyun şu an açık; " +
-                        "kapatılıp yeniden açılacak ve kaydedilmemiş ilerleme kaybolabilir. Önce oyunda " +
-                        "kaydedin.",
-                    confirmLabel = "Devam",
+                    title = tr("The game will be restarted", "Oyun yeniden başlatılacak"),
+                    message = tr("The graphics engine change takes effect when the game launches. The game is open right now; it will be closed and reopened, and unsaved progress may be lost. Save in the game first.", "Grafik motoru değişikliği oyun açılırken geçerli olur. Oyun şu an açık; kapatılıp yeniden açılacak ve kaydedilmemiş ilerleme kaybolabilir. Önce oyunda kaydedin."),
+                    confirmLabel = tr("Continue", "Devam"),
                 )
                 if (!ok) return@launch
             }
             val result = game.startSelected(launch = launchGame)
-            control.reportDone("Oyun Modu", result.summary, ok = result.ok)
+            control.reportDone(tr("Game Mode", "Oyun Modu"), result.summary, ok = result.ok)
             toast.show(result.summary)
         }
     }
@@ -209,16 +206,16 @@ fun GamePage(control: ControlController, game: GameModeController) {
     fun stop() {
         scope.launch {
             val result = game.stop()
-            control.reportDone("Oyun Modu kapatıldı", result.summary, ok = result.ok)
-            toast.show(if (result.ok) "Her şey eski haline döndü" else result.summary)
+            control.reportDone(tr("Game Mode turned off", "Oyun Modu kapatıldı"), result.summary, ok = result.ok)
+            toast.show(if (result.ok) tr("Everything is back to normal", "Her şey eski haline döndü") else result.summary)
         }
     }
 
     fun resetAll() {
         scope.launch {
             val result = game.forceReset()
-            control.reportDone("Her şey eski haline döndürüldü", result.summary, ok = result.ok)
-            toast.show(if (result.ok) "Her şey eski haline döndü" else result.summary)
+            control.reportDone(tr("Everything was restored", "Her şey eski haline döndürüldü"), result.summary, ok = result.ok)
+            toast.show(if (result.ok) tr("Everything is back to normal", "Her şey eski haline döndü") else result.summary)
         }
     }
 
@@ -230,7 +227,7 @@ fun GamePage(control: ControlController, game: GameModeController) {
             }
             if (picked == null) return@launch
             val ok = game.addGame(picked.packageName, picked.name)
-            if (!ok) toast.show("Geçersiz paket adı.")
+            if (!ok) toast.show(tr("Invalid package name.", "Geçersiz paket adı."))
         }
     }
 
@@ -238,10 +235,9 @@ fun GamePage(control: ControlController, game: GameModeController) {
         val pkg = game.selectedPackage ?: return
         scope.launch {
             val ok = dialogs.confirm(
-                title = "Oyunu listeden çıkar",
-                message = "\"${game.selectedName}\" için kayıtlı Oyun Modu ayarları silinir. Oyunun " +
-                    "kendisine dokunulmaz.",
-                confirmLabel = "Çıkar",
+                title = tr("Remove game from the list", "Oyunu listeden çıkar"),
+                message = tr("The saved Game Mode settings for \"${game.selectedName}\" will be deleted. The game itself is not touched.", "\"${game.selectedName}\" için kayıtlı Oyun Modu ayarları silinir. Oyunun kendisine dokunulmaz."),
+                confirmLabel = tr("Remove", "Çıkar"),
                 danger = true,
             )
             if (!ok) return@launch
@@ -263,14 +259,14 @@ fun GamePage(control: ControlController, game: GameModeController) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Oyun Modu",
+                tr("Game Mode", "Oyun Modu"),
                 modifier = Modifier.weight(1f),
                 color = c.text,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
             )
             IconButton(onClick = { scope.launch { sheets.showLogSheet(control) } }) {
-                Icon(Icons.AutoMirrored.Rounded.ReceiptLong, contentDescription = "İşlem günlüğü", tint = c.muted)
+                Icon(Icons.AutoMirrored.Rounded.ReceiptLong, contentDescription = tr("Activity log", "İşlem günlüğü"), tint = c.muted)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -300,7 +296,7 @@ fun GamePage(control: ControlController, game: GameModeController) {
                     trackColor = c.outline,
                 )
             }
-            SectionHeader("Mod seç")
+            SectionHeader(tr("Choose a mode", "Mod seç"))
             GamePresetList(game = game, busy = false)
             Spacer(Modifier.height(6.dp))
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -312,7 +308,7 @@ fun GamePage(control: ControlController, game: GameModeController) {
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(if (showAdvanced) "Gelişmiş ayarları gizle" else "Gelişmiş ayarlar", color = c.muted)
+                    Text(if (showAdvanced) tr("Hide advanced settings", "Gelişmiş ayarları gizle") else tr("Advanced settings", "Gelişmiş ayarlar"), color = c.muted)
                 }
             }
             if (showAdvanced) {
@@ -320,15 +316,15 @@ fun GamePage(control: ControlController, game: GameModeController) {
                     Spacer(Modifier.height(8.dp))
                     GameSuggestionCard(game = game, busy = false)
                 }
-                SectionHeader("Ayrıntılı ayarlar")
+                SectionHeader(tr("Detailed settings", "Ayrıntılı ayarlar"))
                 GameGroups(game = game, cfg = cfg, busy = false)
                 if (lastResult != null && lastResult.steps.isNotEmpty()) {
-                    SectionHeader("Son işlem")
+                    SectionHeader(tr("Last action", "Son işlem"))
                     GameResultCard(result = lastResult)
                 }
                 if (control.ready) {
                     SectionHeader(
-                        "Son oyun oturumu",
+                        tr("Last game session", "Son oyun oturumu"),
                         trailing = {
                             IconButton(
                                 onClick = {
@@ -338,13 +334,13 @@ fun GamePage(control: ControlController, game: GameModeController) {
                                     }
                                 },
                             ) {
-                                Icon(Icons.Rounded.Refresh, contentDescription = "Yenile", tint = c.muted)
+                                Icon(Icons.Rounded.Refresh, contentDescription = tr("Refresh", "Yenile"), tint = c.muted)
                             }
                         },
                     )
                     GameReportCard(game = game)
                 }
-                SectionHeader("Bilmeniz gerekenler")
+                SectionHeader(tr("Good to know", "Bilmeniz gerekenler"))
                 GameHonestyCard()
             }
             Spacer(Modifier.height(10.dp))
@@ -357,7 +353,7 @@ fun GamePage(control: ControlController, game: GameModeController) {
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Bu oyunu listeden çıkar", color = c.muted)
+                    Text(tr("Remove this game from the list", "Bu oyunu listeden çıkar"), color = c.muted)
                 }
             }
         }
@@ -367,18 +363,18 @@ fun GamePage(control: ControlController, game: GameModeController) {
 /** Mod kartında gösterilen tek satırlık özet. */
 private fun presetLine(p: GamePreset): String {
     val tagline = when (p.id) {
-        "ice" -> "En serin ve en uzun pil"
-        "cool" -> "Isınmayı azaltır"
-        "balanced" -> "Akıcılık ve ısı dengesi"
-        "smooth" -> "En akıcı, daha çok ısınır"
+        "ice" -> tr("Coolest and longest battery", "En serin ve en uzun pil")
+        "cool" -> tr("Reduces heat", "Isınmayı azaltır")
+        "balanced" -> tr("Balance of smoothness and heat", "Akıcılık ve ısı dengesi")
+        "smooth" -> tr("Smoothest, runs hotter", "En akıcı, daha çok ısınır")
         else -> ""
     }
-    val scale = if (p.scale >= 0.999) "tam çözünürlük" else "%${(p.scale * 100).roundToInt()} çözünürlük"
+    val scale = if (p.scale >= 0.999) tr("full resolution", "tam çözünürlük") else tr("${(p.scale * 100).roundToInt()}% resolution", "%${(p.scale * 100).roundToInt()} çözünürlük")
     return "$tagline · ${p.targetFps} FPS · $scale"
 }
 
 private fun scaleLabel(v: Double): String =
-    if (v >= 0.999) "Tam çözünürlük" else "%${(v * 100).roundToInt()} çözünürlük"
+    if (v >= 0.999) tr("Full resolution", "Tam çözünürlük") else tr("${(v * 100).roundToInt()}% resolution", "%${(v * 100).roundToInt()} çözünürlük")
 
 /** `enabled` ise [block], değilse `null` (denetimi devre dışı bırakır). */
 private fun <T> enabledIf(enabled: Boolean, block: (T) -> Unit): ((T) -> Unit)? =
@@ -398,31 +394,31 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
     fun set(next: GameModeConfig) = game.updateConfig(next)
 
     val screenOn = ArrayList<String>()
-    cfg.lockHz?.let { screenOn.add("Ekran $it Hz") }
-    if (cfg.dimScreen) screenOn.add("parlaklık %${cfg.dimPercent}")
-    if (cfg.animationsOff) screenOn.add("animasyon kapalı")
+    cfg.lockHz?.let { screenOn.add(tr("Display $it Hz", "Ekran $it Hz")) }
+    if (cfg.dimScreen) screenOn.add(tr("brightness ${cfg.dimPercent}%", "parlaklık %${cfg.dimPercent}"))
+    if (cfg.animationsOff) screenOn.add(tr("animations off", "animasyon kapalı"))
 
     val systemOn = ArrayList<String>()
-    if (cfg.killBackground) systemOn.add("arka plan temiz")
-    if (cfg.dnd) systemOn.add("bildirim sessiz")
-    if (cfg.batterySaver) systemOn.add("pil tasarrufu")
-    if (cfg.cpuCap) systemOn.add("işlemci sınırı %${cfg.cpuCapPercent}")
+    if (cfg.killBackground) systemOn.add(tr("background cleared", "arka plan temiz"))
+    if (cfg.dnd) systemOn.add(tr("notifications silenced", "bildirim sessiz"))
+    if (cfg.batterySaver) systemOn.add(tr("battery saver", "pil tasarrufu"))
+    if (cfg.cpuCap) systemOn.add(tr("CPU cap ${cfg.cpuCapPercent}%", "işlemci sınırı %${cfg.cpuCapPercent}"))
 
     val safetyOn = ArrayList<String>()
-    safetyOn.add(if (cfg.autoRevert) "otomatik geri alma" else "geri alma elle")
+    safetyOn.add(if (cfg.autoRevert) tr("auto revert", "otomatik geri alma") else tr("manual revert", "geri alma elle"))
     if (cfg.autoRevert) {
-        safetyOn.add(if (cfg.guardTempC == 0) "ısı koruması kapalı" else "koruma ${cfg.guardTempC} °C")
+        safetyOn.add(if (cfg.guardTempC == 0) tr("thermal guard off", "ısı koruması kapalı") else tr("guard ${cfg.guardTempC} °C", "koruma ${cfg.guardTempC} °C"))
     }
 
     EngineGroup(game = game, cfg = cfg, busy = busy)
     Spacer(Modifier.height(10.dp))
     GameGroup(
         icon = Icons.Rounded.Speed,
-        title = "Performans",
+        title = tr("Performance", "Performans"),
         summary = "${cfg.targetFps} FPS · ${scaleLabel(cfg.scale)} · ${cfg.powerProfile.label}" +
-            (if (cfg.bedrockViewDistance > 0) " · görüş ${cfg.bedrockViewDistance}" else ""),
+            (if (cfg.bedrockViewDistance > 0) tr(" · view ${cfg.bedrockViewDistance}", " · görüş ${cfg.bedrockViewDistance}") else ""),
     ) {
-        GameLabel("Kare hızı üst sınırı")
+        GameLabel(tr("Frame rate cap", "Kare hızı üst sınırı"))
         Spacer(Modifier.height(8.dp))
         GameChoices(
             values = kFpsChoices,
@@ -433,74 +429,66 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
         if (game.kind == GameKind.MinecraftBedrock && cfg.targetFps > kBedrockFpsCap) {
             Spacer(Modifier.height(6.dp))
             GameHint(
-                "Minecraft Bedrock Android'de oyunun kendisi 60 FPS'e sınırlı. ${cfg.targetFps} FPS " +
-                    "seçmek FPS'i artırmaz, yalnızca telefonu ısıtır; 60 öneririz.",
+                tr("On Android, Minecraft Bedrock itself is capped at 60 FPS. Choosing ${cfg.targetFps} FPS does not raise FPS, it only heats the phone; we recommend 60.", "Minecraft Bedrock Android'de oyunun kendisi 60 FPS'e sınırlı. ${cfg.targetFps} FPS seçmek FPS'i artırmaz, yalnızca telefonu ısıtır; 60 öneririz."),
             )
         }
         Spacer(Modifier.height(16.dp))
-        GameLabel("Oyun çözünürlüğü")
+        GameLabel(tr("Game resolution", "Oyun çözünürlüğü"))
         Spacer(Modifier.height(8.dp))
         GameChoices(
             values = kScaleChoices,
             selected = cfg.scale,
-            label = { v: Double -> if (v >= 1) "Tam" else "%${(v * 100).roundToInt()}" },
+            label = { v: Double -> if (v >= 1) tr("Full", "Tam") else tr("${(v * 100).roundToInt()}%", "%${(v * 100).roundToInt()}") },
             onSelected = enabledIf(!busy) { v: Double -> set(cfg.copy(scale = v)) },
         )
         Spacer(Modifier.height(6.dp))
         GameHint(
-            "Düşük çözünürlük GPU yükünü, ısınmayı ve pil tüketimini en çok azaltan ayardır. " +
-                "Piksel sanat oyunlarda görüntü kaybı azdır.",
+            tr("Lower resolution is the setting that reduces GPU load, heat and battery use the most. Pixel-art games lose very little image quality.", "Düşük çözünürlük GPU yükünü, ısınmayı ve pil tüketimini en çok azaltan ayardır. Piksel sanat oyunlarda görüntü kaybı azdır."),
         )
         if (cfg.reducesResolution) {
             Spacer(Modifier.height(16.dp))
-            GameLabel("Çözünürlük yöntemi")
+            GameLabel(tr("Resolution method", "Çözünürlük yöntemi"))
             Spacer(Modifier.height(8.dp))
             GameChoices(
                 values = ResolutionMethod.values().toList(),
                 selected = cfg.method,
                 label = { v: ResolutionMethod ->
-                    if (v == ResolutionMethod.PerGame) "Yalnız oyun" else "Tüm ekran"
+                    if (v == ResolutionMethod.PerGame) tr("Game only", "Yalnız oyun") else tr("Whole screen", "Tüm ekran")
                 },
                 onSelected = enabledIf(!busy) { v: ResolutionMethod -> set(cfg.copy(method = v)) },
             )
             Spacer(Modifier.height(6.dp))
             GameHint(
                 if (cfg.method == ResolutionMethod.PerGame) {
-                    "Güvenli yöntem. Bazı üreticiler/oyunlar desteklemeyebilir; uygulanamazsa " +
-                        "sonuç listesinde görürsünüz ve \"Tüm ekran\"ı deneyebilirsiniz."
+                    tr("Safe method. Some manufacturers/games may not support it; if it cannot be applied you will see it in the result list and can try \"Whole screen\".", "Güvenli yöntem. Bazı üreticiler/oyunlar desteklemeyebilir; uygulanamazsa sonuç listesinde görürsünüz ve \"Tüm ekran\"ı deneyebilirsiniz.")
                 } else {
-                    "Daha güçlü ve her cihazda çalışır, ama telefonun tamamı geçici olarak " +
-                        "düşük çözünürlüğe geçer. Oyun bitince Geri Al'a basın."
+                    tr("More powerful and works on every device, but the whole phone temporarily switches to a low resolution. Press Revert when the game ends.", "Daha güçlü ve her cihazda çalışır, ama telefonun tamamı geçici olarak düşük çözünürlüğe geçer. Oyun bitince Geri Al'a basın.")
                 },
             )
         }
         if (cfg.packageName.startsWith("com.mojang.minecraft")) {
             Spacer(Modifier.height(6.dp))
             GameHint(
-                "Minecraft'ta çözünürlük düşürme görüntüyü ekranın köşesine sıkıştırdığı için " +
-                    "uygulanmaz. Bunun yerine aşağıdaki görüş mesafesi ayarını kullanın.",
+                tr("Lowering the resolution is not applied to Minecraft because it squeezes the image into a corner of the screen. Use the view distance setting below instead.", "Minecraft'ta çözünürlük düşürme görüntüyü ekranın köşesine sıkıştırdığı için uygulanmaz. Bunun yerine aşağıdaki görüş mesafesi ayarını kullanın."),
             )
         }
         if (game.kind == GameKind.MinecraftBedrock) {
             Spacer(Modifier.height(16.dp))
-            GameLabel("Minecraft görüş mesafesi (FPS ve ısı için en etkili ayar)")
+            GameLabel(tr("Minecraft view distance (the most effective setting for FPS and heat)", "Minecraft görüş mesafesi (FPS ve ısı için en etkili ayar)"))
             Spacer(Modifier.height(8.dp))
             GameChoices(
                 values = kBedrockViewChoices,
                 selected = cfg.bedrockViewDistance,
-                label = { v: Int -> if (v == 0) "Dokunma" else "$v parça" },
+                label = { v: Int -> if (v == 0) tr("Don't touch", "Dokunma") else tr("$v chunks", "$v parça") },
                 onSelected = enabledIf(!busy) { v: Int -> set(cfg.copy(bedrockViewDistance = v)) },
             )
             Spacer(Modifier.height(6.dp))
             GameHint(
-                "Oyun açılmadan önce seçenek dosyasında görüş mesafesi düşürülür; süslü grafik, " +
-                    "süslü gökyüzü ve saydam yapraklar kapanır. İşlemci ve GPU yükü azalır, bu da " +
-                    "hem kare hızını sabit tutar hem ısıyı düşürür. Oyun bitince dosya eski haline " +
-                    "döner. Oyunu bu ayardan sonra açın (açıksa yeniden başlatılır).",
+                tr("Before the game starts, the view distance is lowered in the options file; fancy graphics, fancy skies and transparent leaves are turned off. CPU and GPU load drops, which keeps the frame rate steady and lowers heat. When the game ends the file is restored. Open the game after changing this (it is restarted if it is already open).", "Oyun açılmadan önce seçenek dosyasında görüş mesafesi düşürülür; süslü grafik, süslü gökyüzü ve saydam yapraklar kapanır. İşlemci ve GPU yükü azalır, bu da hem kare hızını sabit tutar hem ısıyı düşürür. Oyun bitince dosya eski haline döner. Oyunu bu ayardan sonra açın (açıksa yeniden başlatılır)."),
             )
         }
         Spacer(Modifier.height(16.dp))
-        GameLabel("Güç profili")
+        GameLabel(tr("Power profile", "Güç profili"))
         Spacer(Modifier.height(8.dp))
         GameChoices(
             values = GamePower.values().toList(),
@@ -514,44 +502,41 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
     Spacer(Modifier.height(10.dp))
     GameGroup(
         icon = Icons.Rounded.Smartphone,
-        title = "Ekran",
-        summary = if (screenOn.isEmpty()) "Ekrana dokunulmaz" else screenOn.joinToString(" · "),
+        title = tr("Display", "Ekran"),
+        summary = if (screenOn.isEmpty()) tr("Display is left alone", "Ekrana dokunulmaz") else screenOn.joinToString(" · "),
     ) {
         GameSwitchRow(
-            title = "Ekranı ${if (cfg.refreshHz > 0) cfg.refreshHz else autoLockHz(cfg.targetFps)} Hz'e kilitle",
-            subtitle = "Değişken yenileme hızının oyun sırasında yükselmesini engeller; " +
-                "ekran ve GPU daha az çalışır. Oyun bitince geri alınır.",
+            title = tr("Lock the display to ${if (cfg.refreshHz > 0) cfg.refreshHz else autoLockHz(cfg.targetFps)} Hz", "Ekranı ${if (cfg.refreshHz > 0) cfg.refreshHz else autoLockHz(cfg.targetFps)} Hz'e kilitle"),
+            subtitle = tr("Prevents the variable refresh rate from rising during the game; the display and GPU work less. Reverted when the game ends.", "Değişken yenileme hızının oyun sırasında yükselmesini engeller; ekran ve GPU daha az çalışır. Oyun bitince geri alınır."),
             value = cfg.lockRefreshRate,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(lockRefreshRate = v)) },
         )
         if (cfg.lockRefreshRate) {
             Spacer(Modifier.height(4.dp))
-            GameLabel("Kilitlenecek yenileme hızı")
+            GameLabel(tr("Refresh rate to lock", "Kilitlenecek yenileme hızı"))
             Spacer(Modifier.height(8.dp))
             GameChoices(
                 values = kHzChoices,
                 selected = cfg.refreshHz,
-                label = { v: Int -> if (v == 0) "Otomatik" else "$v Hz" },
+                label = { v: Int -> if (v == 0) tr("Auto", "Otomatik") else "$v Hz" },
                 onSelected = enabledIf(!busy) { v: Int -> set(cfg.copy(refreshHz = v)) },
             )
             Spacer(Modifier.height(6.dp))
             GameHint(
-                "Otomatik: kare hızının tam katı olan en düşük panel hızı seçilir (30 FPS için 60 Hz). " +
-                    "Panelinizin desteklemediği bir değeri üretici yazılımı yok sayabilir.",
+                tr("Auto: the lowest panel rate that is an exact multiple of the frame rate is chosen (60 Hz for 30 FPS). The firmware may ignore a value your panel does not support.", "Otomatik: kare hızının tam katı olan en düşük panel hızı seçilir (30 FPS için 60 Hz). Panelinizin desteklemediği bir değeri üretici yazılımı yok sayabilir."),
             )
             Spacer(Modifier.height(8.dp))
         }
         RowDivider()
         GameSwitchRow(
-            title = "Ekran parlaklığını kıs",
-            subtitle = "Oyun boyunca parlaklık mevcut değerin %60'ına iner. AMOLED ekranda " +
-                "ısınmayı ve pili en çok etkileyen ayarlardan biridir.",
+            title = tr("Dim the screen brightness", "Ekran parlaklığını kıs"),
+            subtitle = tr("During the game brightness drops to 60% of the current value. On an AMOLED display it is one of the settings that affects heat and battery the most.", "Oyun boyunca parlaklık mevcut değerin %60'ına iner. AMOLED ekranda ısınmayı ve pili en çok etkileyen ayarlardan biridir."),
             value = cfg.dimScreen,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(dimScreen = v)) },
         )
         if (cfg.dimScreen) {
             Spacer(Modifier.height(4.dp))
-            GameLabel("Parlaklık oranı (mevcut değerin yüzdesi)")
+            GameLabel(tr("Brightness level (percent of the current value)", "Parlaklık oranı (mevcut değerin yüzdesi)"))
             Spacer(Modifier.height(8.dp))
             GameChoices(
                 values = kDimChoices,
@@ -563,8 +548,8 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
         }
         RowDivider()
         GameSwitchRow(
-            title = "Sistem animasyonlarını kapat",
-            subtitle = "Oyun boyunca geçiş efektleri kalkar; ekran birleştirme yükü biraz azalır.",
+            title = tr("Turn off system animations", "Sistem animasyonlarını kapat"),
+            subtitle = tr("Transition effects are removed during the game; display compositing load drops a little.", "Oyun boyunca geçiş efektleri kalkar; ekran birleştirme yükü biraz azalır."),
             value = cfg.animationsOff,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(animationsOff = v)) },
         )
@@ -572,42 +557,39 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
     Spacer(Modifier.height(10.dp))
     GameGroup(
         icon = Icons.Rounded.Memory,
-        title = "Sistem",
-        summary = if (systemOn.isEmpty()) "Sisteme dokunulmaz" else systemOn.joinToString(" · "),
+        title = tr("System", "Sistem"),
+        summary = if (systemOn.isEmpty()) tr("System is left alone", "Sisteme dokunulmaz") else systemOn.joinToString(" · "),
     ) {
         GameSwitchRow(
-            title = "Arka planı temizle",
-            subtitle = "Başlamadan önce RAM'i boşaltır; işlemciye daha az rekabet kalır.",
+            title = tr("Clear the background", "Arka planı temizle"),
+            subtitle = tr("Frees RAM before the game starts; there is less competition for the CPU.", "Başlamadan önce RAM'i boşaltır; işlemciye daha az rekabet kalır."),
             value = cfg.killBackground,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(killBackground = v)) },
         )
         RowDivider()
         GameSwitchRow(
-            title = "Bildirimleri sustur",
-            subtitle = "Oyun sırasında Rahatsız Etme (yalnızca öncelikliler) açılır; bildirimler " +
-                "takılma ve ekran uyanması yaratmaz.",
+            title = tr("Silence notifications", "Bildirimleri sustur"),
+            subtitle = tr("Do Not Disturb (priority only) is turned on during the game; notifications do not cause stutter or wake the screen.", "Oyun sırasında Rahatsız Etme (yalnızca öncelikliler) açılır; bildirimler takılma ve ekran uyanması yaratmaz."),
             value = cfg.dnd,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(dnd = v)) },
         )
         RowDivider()
         GameSwitchRow(
-            title = "Pil Tasarrufu'nu aç",
-            subtitle = "Sistemin Pil Tasarrufu modu oyun boyunca açık kalır; çoğu cihazda " +
-                "işlemciyi ve arka plan işlerini kısar. Oyun bitince eski haline döner.",
+            title = tr("Turn on Battery Saver", "Pil Tasarrufu'nu aç"),
+            subtitle = tr("The system's Battery Saver mode stays on during the game; on most devices it limits the CPU and background work. It returns to normal when the game ends.", "Sistemin Pil Tasarrufu modu oyun boyunca açık kalır; çoğu cihazda işlemciyi ve arka plan işlerini kısar. Oyun bitince eski haline döner."),
             value = cfg.batterySaver,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(batterySaver = v)) },
         )
         RowDivider()
         GameSwitchRow(
-            title = "İşlemci hızını sınırla (root)",
-            subtitle = "En güçlü iki çekirdek kümesi seçtiğiniz oranda çalışır; ısı ve hız dalgalanması azalır. " +
-                "Yalnızca root ile çalışır, Shizuku ile uygulanamaz.",
+            title = tr("Limit CPU speed (root)", "İşlemci hızını sınırla (root)"),
+            subtitle = tr("The two strongest core clusters run at the percentage you choose; heat and speed fluctuations drop. Works only with root, cannot be applied with Shizuku.", "En güçlü iki çekirdek kümesi seçtiğiniz oranda çalışır; ısı ve hız dalgalanması azalır. Yalnızca root ile çalışır, Shizuku ile uygulanamaz."),
             value = cfg.cpuCap,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(cpuCap = v)) },
         )
         if (cfg.cpuCap) {
             Spacer(Modifier.height(4.dp))
-            GameLabel("İşlemci hız sınırı (azami hızın yüzdesi)")
+            GameLabel(tr("CPU speed limit (percent of max speed)", "İşlemci hız sınırı (azami hızın yüzdesi)"))
             Spacer(Modifier.height(8.dp))
             GameChoices(
                 values = kCpuCapChoices,
@@ -621,35 +603,31 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
     Spacer(Modifier.height(10.dp))
     GameGroup(
         icon = Icons.Rounded.ShieldMoon,
-        title = "Isı ve güvenlik",
+        title = tr("Heat & safety", "Isı ve güvenlik"),
         summary = safetyOn.joinToString(" · "),
     ) {
         GameSwitchRow(
-            title = "Oyun kapanınca otomatik geri al",
-            subtitle = "Cihazda küçük bir izleyici çalışır: oyun yaklaşık 40 saniye ön planda " +
-                "olmazsa ayarlar kendiliğinden eski haline döner; oyun boyunca FPS/ısı/işlemci " +
-                "hızı kaydedilir. Terminal kapansa da çalışır.",
+            title = tr("Auto-revert when the game closes", "Oyun kapanınca otomatik geri al"),
+            subtitle = tr("A small watcher runs on the device: if the game is not in the foreground for about 40 seconds the settings are restored automatically; FPS / heat / CPU speed are recorded during the game. It keeps working even if TerminalF is closed.", "Cihazda küçük bir izleyici çalışır: oyun yaklaşık 40 saniye ön planda olmazsa ayarlar kendiliğinden eski haline döner; oyun boyunca FPS/ısı/işlemci hızı kaydedilir. Terminal kapansa da çalışır."),
             value = cfg.autoRevert,
             onChanged = enabledIf(!busy) { v: Boolean -> set(cfg.copy(autoRevert = v)) },
         )
         RowDivider()
         Spacer(Modifier.height(12.dp))
-        GameLabel("Isı koruması eşiği (pil sıcaklığı)")
+        GameLabel(tr("Thermal guard threshold (battery temperature)", "Isı koruması eşiği (pil sıcaklığı)"))
         Spacer(Modifier.height(8.dp))
         GameChoices(
             values = kGuardTempChoices,
             selected = cfg.guardTempC,
-            label = { v: Int -> if (v == 0) "Kapalı" else "$v °C" },
+            label = { v: Int -> if (v == 0) tr("Off", "Kapalı") else "$v °C" },
             onSelected = enabledIf(!busy && cfg.autoRevert) { v: Int -> set(cfg.copy(guardTempC = v)) },
         )
         Spacer(Modifier.height(6.dp))
         GameHint(
             if (cfg.autoRevert) {
-                "Pil sıcaklığı (ya da sistemin ısıl durumu) art arda iki ölçümde eşiğe ulaşırsa " +
-                    "izleyici bir kez daha sıkılaştırır: parlaklığı daha çok kısar, Pil Tasarrufu'nu " +
-                    "açar (seçiliyse) ve root varsa işlemciyi daha çok sınırlar. Oyun bitince hepsi geri alınır."
+                tr("If the battery temperature (or the system thermal state) reaches the threshold in two consecutive readings, the watcher tightens things once more: it dims the brightness further, turns on Battery Saver (if selected) and, with root, limits the CPU more. Everything is reverted when the game ends.", "Pil sıcaklığı (ya da sistemin ısıl durumu) art arda iki ölçümde eşiğe ulaşırsa izleyici bir kez daha sıkılaştırır: parlaklığı daha çok kısar, Pil Tasarrufu'nu açar (seçiliyse) ve root varsa işlemciyi daha çok sınırlar. Oyun bitince hepsi geri alınır.")
             } else {
-                "Isı koruması izleyiciye bağlıdır; açmak için otomatik geri almayı açın."
+                tr("The thermal guard relies on the watcher; turn on auto-revert to enable it.", "Isı koruması izleyiciye bağlıdır; açmak için otomatik geri almayı açın.")
             },
         )
     }
@@ -657,32 +635,29 @@ private fun GameGroups(game: GameModeController, cfg: GameModeConfig, busy: Bool
     val customCount = customLines(cfg.customStart).size + customLines(cfg.customEnd).size
     GameGroup(
         icon = Icons.Rounded.Code,
-        title = "Özel komutlar",
-        summary = if (customCount == 0) "Kendi komutlarını ekle" else "$customCount özel komut",
+        title = tr("Custom commands", "Özel komutlar"),
+        summary = if (customCount == 0) tr("Add your own commands", "Kendi komutlarını ekle") else tr("$customCount custom commands", "$customCount özel komut"),
     ) {
-        GameLabel("Başlarken çalışsın")
+        GameLabel(tr("Run at start", "Başlarken çalışsın"))
         Spacer(Modifier.height(8.dp))
         GameCommandField(
             initial = cfg.customStart,
             resetKey = cfg.packageName + ":start",
-            placeholder = "Her satıra bir komut\nörn: settings put global some_key 1",
+            placeholder = tr("One command per line\ne.g. settings put global some_key 1", "Her satıra bir komut\nörn: settings put global some_key 1"),
             onChange = { v: String -> set(game.config.copy(customStart = v)) },
         )
         Spacer(Modifier.height(16.dp))
-        GameLabel("Geri Al'a basınca çalışsın")
+        GameLabel(tr("Run when Revert is pressed", "Geri Al'a basınca çalışsın"))
         Spacer(Modifier.height(8.dp))
         GameCommandField(
             initial = cfg.customEnd,
             resetKey = cfg.packageName + ":end",
-            placeholder = "Her satıra bir komut",
+            placeholder = tr("One command per line", "Her satıra bir komut"),
             onChange = { v: String -> set(game.config.copy(customEnd = v)) },
         )
         Spacer(Modifier.height(6.dp))
         GameHint(
-            "Komutlar sistem yetkisiyle (Shizuku/root) sırayla çalışır; boş satırlar ve # ile başlayan " +
-                "satırlar atlanır (en çok $kCustomMaxLines satır). Bitiş komutları yalnızca Geri Al ile " +
-                "çalışır; oyun kapanınca cihazdaki otomatik geri almada çalışmaz. Komutları kendi " +
-                "sorumluluğunda ekle.",
+            tr("Commands run in order with system permission (Shizuku/root); blank lines and lines starting with # are skipped (at most $kCustomMaxLines lines). End commands run only with Revert; they do not run in the on-device auto-revert when the game closes. Add commands at your own risk.", "Komutlar sistem yetkisiyle (Shizuku/root) sırayla çalışır; boş satırlar ve # ile başlayan satırlar atlanır (en çok $kCustomMaxLines satır). Bitiş komutları yalnızca Geri Al ile çalışır; oyun kapanınca cihazdaki otomatik geri almada çalışmaz. Komutları kendi sorumluluğunda ekle."),
         )
     }
 }
@@ -716,11 +691,11 @@ private fun EngineGroup(game: GameModeController, cfg: GameModeConfig, busy: Boo
 
     val summary = ArrayList<String>()
     summary.add(cfg.backend.label)
-    if (cfg.fixedPerf) summary.add("sabit performans")
+    if (cfg.fixedPerf) summary.add(tr("fixed performance", "sabit performans"))
 
     GameGroup(
         icon = Icons.Rounded.Bolt,
-        title = "Grafik motoru",
+        title = tr("Graphics engine", "Grafik motoru"),
         summary = summary.joinToString(" · "),
     ) {
         val warning = modWarning(kind)
@@ -733,7 +708,7 @@ private fun EngineGroup(game: GameModeController, cfg: GameModeConfig, busy: Boo
             )
             Spacer(Modifier.height(14.dp))
         }
-        GameLabel("Grafik sürücüsü arka ucu")
+        GameLabel(tr("Graphics driver backend", "Grafik sürücüsü arka ucu"))
         Spacer(Modifier.height(8.dp))
         GameChoices(
             values = GraphicsBackend.values().toList(),
@@ -746,38 +721,34 @@ private fun EngineGroup(game: GameModeController, cfg: GameModeConfig, busy: Boo
         if (cfg.backend != GraphicsBackend.Default) {
             Spacer(Modifier.height(6.dp))
             GameHint(
-                "Sürücü oyun açılırken seçilir: Başlat'a basınca oyun açıksa kapatılıp yeniden açılır. " +
-                    "Oyun bitince seçim eski haline döner.",
+                tr("The driver is chosen when the game launches: if the game is open when you press Start it is closed and reopened. The choice is restored when the game ends.", "Sürücü oyun açılırken seçilir: Başlat'a basınca oyun açıksa kapatılıp yeniden açılır. Oyun bitince seçim eski haline döner."),
             )
         }
         Spacer(Modifier.height(10.dp))
         RowDivider()
         GameSwitchRow(
-            title = "Sabit performans modu (deneysel)",
-            subtitle = "İşlemci/GPU hızını oyun boyunca sabit tutar; kare süreleri daha düzgün olabilir " +
-                "ama telefon daha çok ısınır. Android 12+ gerekir, her cihazda çalışmaz. Isı koruması " +
-                "devreye girerse otomatik kapanır.",
+            title = tr("Fixed performance mode (experimental)", "Sabit performans modu (deneysel)"),
+            subtitle = tr("Keeps CPU/GPU speed constant during the game; frame times may be smoother but the phone runs hotter. Requires Android 12+ and does not work on every device. It turns off automatically if the thermal guard kicks in.", "İşlemci/GPU hızını oyun boyunca sabit tutar; kare süreleri daha düzgün olabilir ama telefon daha çok ısınır. Android 12+ gerekir, her cihazda çalışmaz. Isı koruması devreye girerse otomatik kapanır."),
             value = cfg.fixedPerf,
             onChanged = enabledIf(!busy) { v: Boolean -> game.updateConfig(cfg.copy(fixedPerf = v)) },
         )
         RowDivider()
         Spacer(Modifier.height(12.dp))
-        GameLabel("Oyunu önceden derle")
+        GameLabel(tr("Precompile the game", "Oyunu önceden derle"))
         Spacer(Modifier.height(4.dp))
         GameHint(
-            "Java/Kotlin tarafı ağır oyunlarda ilk açılışı ve takılmaları azaltabilir; tamamen yerel " +
-                "(C++) motorlarda etkisi sınırlıdır. Tek seferliktir, geri alınacak bir şey yapmaz.",
+            tr("In games heavy on the Java/Kotlin side it can reduce first-launch time and stutter; the effect is limited on fully native (C++) engines. It is a one-time action and has nothing to revert.", "Java/Kotlin tarafı ağır oyunlarda ilk açılışı ve takılmaları azaltabilir; tamamen yerel (C++) motorlarda etkisi sınırlıdır. Tek seferliktir, geri alınacak bir şey yapmaz."),
         )
         Spacer(Modifier.height(10.dp))
         SoftButton(
-            label = "Şimdi derle",
+            label = tr("Compile now", "Şimdi derle"),
             onClick = if (busy || !game.control.ready) {
                 null
             } else {
                 ({
                     scope.launch {
                         val r = game.compileSelected()
-                        toast.show(if (r.ok) "Oyun derlendi" else "Derlenemedi: ${r.detail}")
+                        toast.show(if (r.ok) tr("Game compiled", "Oyun derlendi") else tr("Could not compile: ${r.detail}", "Derlenemedi: ${r.detail}"))
                     }
                 })
             },
@@ -785,7 +756,7 @@ private fun EngineGroup(game: GameModeController, cfg: GameModeConfig, busy: Boo
         )
         if (tips.isNotEmpty()) {
             Spacer(Modifier.height(16.dp))
-            GameLabel("${kind.title} için ipuçları")
+            GameLabel(tr("Tips for ${kind.title}", "${kind.title} için ipuçları"))
             for (t in tips) {
                 Spacer(Modifier.height(6.dp))
                 GameHint("• $t")
@@ -794,15 +765,14 @@ private fun EngineGroup(game: GameModeController, cfg: GameModeConfig, busy: Boo
         if (kind == GameKind.MinecraftBedrock) {
             val context = LocalContext.current
             Spacer(Modifier.height(16.dp))
-            GameLabel("Minecraft'ı güncelle")
+            GameLabel(tr("Update Minecraft", "Minecraft'ı güncelle"))
             Spacer(Modifier.height(4.dp))
             GameHint(
-                "Google Play'deki Minecraft sayfasını açar; güncellemeyi orada yaparsınız. Başka " +
-                    "kaynaktan APK kurmayın.",
+                tr("Opens the Minecraft page on Google Play; update it there. Do not install APKs from other sources.", "Google Play'deki Minecraft sayfasını açar; güncellemeyi orada yaparsınız. Başka kaynaktan APK kurmayın."),
             )
             Spacer(Modifier.height(10.dp))
             SoftButton(
-                label = "Google Play'de aç",
+                label = tr("Open in Google Play", "Google Play'de aç"),
                 onClick = { openPlayStore(context, kBedrockPackage) },
                 icon = Icons.Rounded.Refresh,
             )
@@ -810,14 +780,13 @@ private fun EngineGroup(game: GameModeController, cfg: GameModeConfig, busy: Boo
         if (rec != null) {
             Spacer(Modifier.height(14.dp))
             SoftButton(
-                label = "Önerilen ayarı uygula",
+                label = tr("Apply recommended settings", "Önerilen ayarı uygula"),
                 onClick = if (busy) null else ({ game.applyRecommended() }),
                 icon = Icons.Rounded.AutoFixHigh,
             )
             Spacer(Modifier.height(6.dp))
             GameHint(
-                "Bu bir deneme noktasıdır, garanti değildir. Bir oyun oturumu oynayıp \"Son oyun " +
-                    "oturumu\" ortalama FPS'ini varsayılanla karşılaştırın.",
+                tr("This is a starting point, not a guarantee. Play a session and compare the average FPS in \"Last game session\" with the default.", "Bu bir deneme noktasıdır, garanti değildir. Bir oyun oturumu oynayıp \"Son oyun oturumu\" ortalama FPS'ini varsayılanla karşılaştırın."),
             )
         }
     }
@@ -831,24 +800,22 @@ private fun GameEmptyHero(onAdd: () -> Unit) {
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(c.primary.faded(0.12f)),
+                .background(c.green.faded(0.16f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Rounded.SportsEsports, contentDescription = null, tint = c.primary)
+            Icon(Icons.Rounded.SportsEsports, contentDescription = null, tint = c.green)
         }
         Spacer(Modifier.height(14.dp))
-        Text("Bir oyun seçin", color = c.text, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+        Text(tr("Pick a game", "Bir oyun seçin"), color = c.text, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
         Spacer(Modifier.height(6.dp))
         Text(
-            "Yüklü herhangi bir oyunu ekleyin. Her oyunun ayarı ayrı saklanır; tek dokunuşla " +
-                "ısıyı, GPU yükünü ve pil tüketimini azaltıp oyunu açarız. Oyun kapanınca her şey " +
-                "eski haline döner.",
+            tr("Add any installed game. Each game keeps its own settings; with one tap we reduce heat, GPU load and battery use and launch the game. When the game closes everything returns to normal.", "Yüklü herhangi bir oyunu ekleyin. Her oyunun ayarı ayrı saklanır; tek dokunuşla ısıyı, GPU yükünü ve pil tüketimini azaltıp oyunu açarız. Oyun kapanınca her şey eski haline döner."),
             color = c.muted,
             fontSize = 13.sp,
             lineHeight = (13f * 1.45f).sp,
         )
         Spacer(Modifier.height(16.dp))
-        PrimaryButton(label = "Oyun Seç", onClick = onAdd, icon = Icons.Rounded.Add)
+        PrimaryButton(label = tr("Choose Game", "Oyun Seç"), onClick = onAdd, icon = Icons.Rounded.Add)
     }
 }
 
@@ -882,7 +849,7 @@ private fun GameStrip(game: GameModeController, busy: Boolean, onAdd: () -> Unit
         GameActionChip(
             onClick = if (busy) null else onAdd,
             leadingIcon = Icons.Rounded.Add,
-            label = "Oyun ekle",
+            label = tr("Add game", "Oyun ekle"),
         )
     }
 }
@@ -953,23 +920,23 @@ private fun GameHeroCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             StatusPill(
-                label = if (here) "Oyun modu AÇIK" else "Oyun modu kapalı",
+                label = if (here) tr("Game Mode ON", "Oyun modu AÇIK") else tr("Game Mode off", "Oyun modu kapalı"),
                 color = if (here) c.good else c.muted,
             )
-            if (otherActive) StatusPill(label = "Başka bir oyunda açık", color = c.warn)
+            if (otherActive) StatusPill(label = tr("On for another game", "Başka bir oyunda açık"), color = c.warn)
             if (ready && installed != null) {
                 StatusPill(
-                    label = if (installed) "Oyun yüklü" else "Oyun bulunamadı",
+                    label = if (installed) tr("Game installed", "Oyun yüklü") else tr("Game not found", "Oyun bulunamadı"),
                     color = if (installed) c.good else c.warn,
                 )
             }
-            if (hz != null) StatusPill(label = "Ekran ${hz.roundToInt()} Hz", color = c.muted)
+            if (hz != null) StatusPill(label = tr("Display ${hz.roundToInt()} Hz", "Ekran ${hz.roundToInt()} Hz"), color = c.muted)
             if (game.config.backend != GraphicsBackend.Default) {
-                StatusPill(label = "Motor: ${game.config.backend.label}", color = c.primary)
+                StatusPill(label = tr("Engine: ${game.config.backend.label}", "Motor: ${game.config.backend.label}"), color = c.primary)
             }
             if (here && alive != null) {
                 StatusPill(
-                    label = if (alive) "Otomatik geri alma: izliyor" else "Otomatik geri alma: kapalı",
+                    label = if (alive) tr("Auto revert: watching", "Otomatik geri alma: izliyor") else tr("Auto revert: off", "Otomatik geri alma: kapalı"),
                     color = if (alive) c.good else c.warn,
                 )
             }
@@ -977,7 +944,7 @@ private fun GameHeroCard(
         if (!ready) {
             Spacer(Modifier.height(10.dp))
             Text(
-                "Oyun modu için tek seferlik kurulum gerekiyor. Başlat'a basınca kurulum açılır.",
+                tr("A one-time setup is needed for Game Mode. Pressing Start opens the setup.", "Oyun modu için tek seferlik kurulum gerekiyor. Başlat'a basınca kurulum açılır."),
                 color = c.muted,
                 fontSize = 12.5.sp,
                 lineHeight = (12.5f * 1.4f).sp,
@@ -994,7 +961,7 @@ private fun GameHeroCard(
         }
         Spacer(Modifier.height(16.dp))
         PrimaryButton(
-            label = if (here) "Yeniden Uygula ve Başlat" else "Başlat",
+            label = if (here) tr("Re-apply & Start", "Yeniden Uygula ve Başlat") else tr("Start", "Başlat"),
             onClick = if (busy) null else onStart,
             icon = Icons.Rounded.PlayArrow,
             busy = busy,
@@ -1002,14 +969,14 @@ private fun GameHeroCard(
         Spacer(Modifier.height(10.dp))
         Row {
             SoftButton(
-                label = "Sadece Uygula",
+                label = tr("Apply Only", "Sadece Uygula"),
                 onClick = if (busy) null else onApply,
                 modifier = Modifier.weight(1f),
                 icon = Icons.Rounded.Tune,
             )
             Spacer(Modifier.width(10.dp))
             SoftButton(
-                label = "Geri Al",
+                label = tr("Revert", "Geri Al"),
                 onClick = if (busy || !game.active) null else onStop,
                 modifier = Modifier.weight(1f),
                 icon = Icons.AutoMirrored.Rounded.Undo,
@@ -1018,7 +985,7 @@ private fun GameHeroCard(
         }
         Spacer(Modifier.height(10.dp))
         SoftButton(
-            label = "Her Şeyi Eski Haline Döndür",
+            label = tr("Restore Everything", "Her Şeyi Eski Haline Döndür"),
             onClick = if (busy) null else onReset,
             modifier = Modifier.fillMaxWidth(),
             icon = Icons.Rounded.Refresh,
@@ -1082,7 +1049,7 @@ private fun GamePresetList(game: GameModeController, busy: Boolean) {
         }
         if (matched == null) {
             GameHint(
-                "Özel ayar: gelişmiş ayarlarda değişiklik yaptınız.",
+                tr("Custom: you changed the advanced settings.", "Özel ayar: gelişmiş ayarlarda değişiklik yaptınız."),
                 modifier = Modifier.padding(horizontal = 4.dp),
             )
         }
@@ -1096,12 +1063,12 @@ private fun GameSuggestionCard(game: GameModeController, busy: Boolean) {
     val sug = game.suggestion ?: return
     val pct = (sug.scale * 100).roundToInt()
     val label = if (sug.fps == null) {
-        "Uygula: ${if (sug.scale >= 1) "Tam" else "%$pct"} çözünürlük"
+        tr("Apply: ${if (sug.scale >= 1) "Full" else "$pct%"} resolution", "Uygula: ${if (sug.scale >= 1) "Tam" else "%$pct"} çözünürlük")
     } else {
-        "Uygula: %$pct · ${sug.fps} FPS"
+        tr("Apply: $pct% · ${sug.fps} FPS", "Uygula: %$pct · ${sug.fps} FPS")
     }
     AppCard(borderColor = c.warn.faded(0.5f)) {
-        Text("Öneri", color = c.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.5.sp)
+        Text(tr("Suggestion", "Öneri"), color = c.text, fontWeight = FontWeight.ExtraBold, fontSize = 15.5.sp)
         Spacer(Modifier.height(4.dp))
         GameHint(sug.reason)
         Spacer(Modifier.height(10.dp))
@@ -1122,8 +1089,7 @@ private fun GameReportCard(game: GameModeController) {
     if (s == null) {
         AppCard {
             Text(
-                "Henüz kayıt yok. Oyun Modu açıkken oynayın; oyun ön plandayken her 10 saniyede " +
-                    "FPS, ısıl durum ve işlemci hızı kaydedilir. Bitince buraya dönün.",
+                tr("No records yet. Play with Game Mode on; while the game is in the foreground FPS, thermal state and CPU speed are recorded every 10 seconds. Come back here when you are done.", "Henüz kayıt yok. Oyun Modu açıkken oynayın; oyun ön plandayken her 10 saniyede FPS, ısıl durum ve işlemci hızı kaydedilir. Bitince buraya dönün."),
                 color = c.muted,
                 fontSize = 13.sp,
                 lineHeight = (13f * 1.45f).sp,
@@ -1148,15 +1114,15 @@ private fun GameReportCard(game: GameModeController) {
     val cpuRatio = s.avgCpuRatio
 
     AppCard(borderColor = color.faded(0.4f)) {
-        ReportRow("Süre", formatSeconds(s.durationSec))
-        ReportRow("Ortalama FPS", if (avgFps == null) "ölçülemedi" else fixed(avgFps, 1))
-        ReportRow("En düşük FPS", if (minFps == null) "ölçülemedi" else fixed(minFps, 1))
-        ReportRow("En yüksek ısıl durum", if (maxThermal == null) "okunamadı" else thermalLabel(maxThermal))
+        ReportRow(tr("Duration", "Süre"), formatSeconds(s.durationSec))
+        ReportRow(tr("Average FPS", "Ortalama FPS"), if (avgFps == null) tr("not measured", "ölçülemedi") else fixed(avgFps, 1))
+        ReportRow(tr("Lowest FPS", "En düşük FPS"), if (minFps == null) tr("not measured", "ölçülemedi") else fixed(minFps, 1))
+        ReportRow(tr("Highest thermal state", "En yüksek ısıl durum"), if (maxThermal == null) tr("unavailable", "okunamadı") else thermalLabel(maxThermal))
         ReportRow(
-            "Büyük çekirdek hızı",
-            if (cpuRatio == null) "okunamadı" else "%${(cpuRatio * 100).roundToInt()}",
+            tr("Big core speed", "Büyük çekirdek hızı"),
+            if (cpuRatio == null) tr("unavailable", "okunamadı") else tr("${(cpuRatio * 100).roundToInt()}%", "%${(cpuRatio * 100).roundToInt()}"),
         )
-        if (s.guardTriggered) ReportRow("Isı koruması", "devreye girdi")
+        if (s.guardTriggered) ReportRow(tr("Thermal guard", "Isı koruması"), tr("triggered", "devreye girdi"))
         if (d != null) {
             Spacer(Modifier.height(10.dp))
             Text(d.title, color = color, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
@@ -1212,7 +1178,7 @@ private fun GameResultCard(result: GameRunResult) {
                     if (!step.ok) {
                         Text(
                             if (step.optional) {
-                                "Bu cihazda desteklenmiyor olabilir. ${step.detail}"
+                                tr("May not be supported on this device. ${step.detail}", "Bu cihazda desteklenmiyor olabilir. ${step.detail}")
                             } else {
                                 step.detail
                             },
@@ -1232,23 +1198,13 @@ private fun GameResultCard(result: GameRunResult) {
 @Composable
 private fun GameHonestyCard() {
     val items = listOf(
-        "Bir oyunun kare hızı dışarıdan YÜKSELTİLEMEZ; burada oyunun GPU yükü azaltılır ve " +
-            "kare hızına üst sınır konur. 90 FPS, ancak oyunun işlemcisi o hızı üretebiliyorsa görülür.",
-        "Çok sayıda birim, büyük hesaplar ya da yoğun fizik içeren oyunlarda yavaşlamanın büyük " +
-            "kısmı işlemciden gelir. Bu durumda çözünürlük düşürmek ısınmayı ve pili belirgin azaltır, " +
-            "akıcılığı ise sınırlı artırır.",
-        "Ana sayfadaki sıcaklık PİL sıcaklığıdır. Oyun bittikten sonra da bir süre yüksek kalır; " +
-            "şarj olurken oynamak, kılıf ve sıcak ortam üstüne ekler. \"Buz\" modu ve 38 °C ısı koruması " +
-            "ısıyı en çok düşüren seçimdir; yine de oyun işlemci kaynaklıysa sıcaklık tamamen önlenemez.",
-        "Oyunun kendi motoru (ör. Minecraft'ın RenderDragon'ı) değiştirilemez; seçilebilen şey " +
-            "oyunun kullandığı grafik sürücüsü yoludur (yerel GLES ya da ANGLE/Vulkan). Etkisi GPU'ya " +
-            "göre artı ya da eksi olabilir; Son oyun oturumundan ölçerek karşılaştırın.",
-        "Ekran Hz'si ve çözünürlük ayarları üreticiye (HyperOS) göre farklı davranabilir. " +
-            "Uygulanamayan adımlar sonuç listesinde açıkça işaretlenir; başarı uydurulmaz.",
-        "FPS değeri, oyunun kare zamanlarından (SurfaceFlinger) cihazda ölçülür; okunamazsa " +
-            "\"ölçülemedi\" yazar. Teşhis sezgiseldir ve \"olası\" der, kesin hüküm vermez.",
-        "Oyun bitince Geri Al'a basın: ekran 90 Hz'de kilitli kalırsa pil gereksiz harcanır. " +
-            "Eski değerler kayıtlıdır, uygulama kapansa bile geri alınır.",
+        tr("A game's frame rate cannot be RAISED from the outside; here the game's GPU load is reduced and a frame rate cap is set. 90 FPS is only seen if the game's CPU can produce that speed.", "Bir oyunun kare hızı dışarıdan YÜKSELTİLEMEZ; burada oyunun GPU yükü azaltılır ve kare hızına üst sınır konur. 90 FPS, ancak oyunun işlemcisi o hızı üretebiliyorsa görülür."),
+        tr("In games with many units, heavy calculations or intense physics, most of the slowdown comes from the CPU. In that case lowering the resolution noticeably reduces heat and battery use but improves smoothness only a little.", "Çok sayıda birim, büyük hesaplar ya da yoğun fizik içeren oyunlarda yavaşlamanın büyük kısmı işlemciden gelir. Bu durumda çözünürlük düşürmek ısınmayı ve pili belirgin azaltır, akıcılığı ise sınırlı artırır."),
+        tr("The temperature on the Home page is the BATTERY temperature. It stays high for a while after the game ends; playing while charging, a case and a hot environment add to it. The \"Ice\" mode and the 38 °C thermal guard are the choices that lower heat the most; still, if the game is CPU-bound the heat cannot be fully prevented.", "Ana sayfadaki sıcaklık PİL sıcaklığıdır. Oyun bittikten sonra da bir süre yüksek kalır; şarj olurken oynamak, kılıf ve sıcak ortam üstüne ekler. \"Buz\" modu ve 38 °C ısı koruması ısıyı en çok düşüren seçimdir; yine de oyun işlemci kaynaklıysa sıcaklık tamamen önlenemez."),
+        tr("A game's own engine (e.g. Minecraft's RenderDragon) cannot be replaced; what can be chosen is the graphics driver path the game uses (native GLES or ANGLE/Vulkan). The effect can be positive or negative depending on the GPU; measure with Last game session and compare.", "Oyunun kendi motoru (ör. Minecraft'ın RenderDragon'ı) değiştirilemez; seçilebilen şey oyunun kullandığı grafik sürücüsü yoludur (yerel GLES ya da ANGLE/Vulkan). Etkisi GPU'ya göre artı ya da eksi olabilir; Son oyun oturumundan ölçerek karşılaştırın."),
+        tr("Display Hz and resolution settings may behave differently depending on the manufacturer (HyperOS). Steps that cannot be applied are clearly marked in the result list; success is never faked.", "Ekran Hz'si ve çözünürlük ayarları üreticiye (HyperOS) göre farklı davranabilir. Uygulanamayan adımlar sonuç listesinde açıkça işaretlenir; başarı uydurulmaz."),
+        tr("FPS is measured on the device from the game's frame times (SurfaceFlinger); if it cannot be read it says \"not measured\". The diagnosis is heuristic and says \"likely\", never a definite verdict.", "FPS değeri, oyunun kare zamanlarından (SurfaceFlinger) cihazda ölçülür; okunamazsa \"ölçülemedi\" yazar. Teşhis sezgiseldir ve \"olası\" der, kesin hüküm vermez."),
+        tr("Press Revert when the game ends: if the display stays locked at 90 Hz the battery is wasted. The old values are saved and are reverted even if the app is closed.", "Oyun bitince Geri Al'a basın: ekran 90 Hz'de kilitli kalırsa pil gereksiz harcanır. Eski değerler kayıtlıdır, uygulama kapansa bile geri alınır."),
     )
     val c = AppTheme.colors
     AppCard {

@@ -1,5 +1,6 @@
 package com.terminalf.app.ui.components
 
+import com.terminalf.app.core.tr
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,7 +36,7 @@ class Toaster(private val host: SnackbarHostState, private val scope: CoroutineS
     }
 }
 
-val LocalToaster = staticCompositionLocalOf<Toaster> { error("Toaster sağlanmadı") }
+val LocalToaster = staticCompositionLocalOf<Toaster> { error("Toaster not provided") }
 
 class ConfirmRequest(
     val title: String,
@@ -53,7 +54,7 @@ class DialogHost {
     suspend fun confirm(
         title: String,
         message: String,
-        confirmLabel: String = "Devam",
+        confirmLabel: String = tr("Continue", "Devam"),
         danger: Boolean = false,
     ): Boolean {
         val r = ConfirmRequest(title, message, confirmLabel, danger, CompletableDeferred())
@@ -71,7 +72,7 @@ class DialogHost {
     }
 }
 
-val LocalDialogs = staticCompositionLocalOf<DialogHost> { error("DialogHost sağlanmadı") }
+val LocalDialogs = staticCompositionLocalOf<DialogHost> { error("DialogHost not provided") }
 
 @Composable
 fun DialogHostContent(host: DialogHost) {
@@ -84,7 +85,7 @@ fun DialogHostContent(host: DialogHost) {
         title = { Text(r.title, fontWeight = FontWeight.ExtraBold, color = c.text) },
         text = { Text(r.message, color = c.muted) },
         dismissButton = {
-            TextButton(onClick = { host.finish(r, false) }) { Text("Vazgeç", color = c.muted) }
+            TextButton(onClick = { host.finish(r, false) }) { Text(tr("Dismiss", "Vazgeç"), color = c.muted) }
         },
         confirmButton = {
             TextButton(onClick = { host.finish(r, true) }) {
@@ -129,7 +130,7 @@ class SheetHost {
     }
 }
 
-val LocalSheets = staticCompositionLocalOf<SheetHost> { error("SheetHost sağlanmadı") }
+val LocalSheets = staticCompositionLocalOf<SheetHost> { error("SheetHost not provided") }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

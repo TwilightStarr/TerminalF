@@ -17,11 +17,16 @@ data class OptimizationProfile(
     val reversible: Boolean = true,
 )
 
-val kProfiles: List<OptimizationProfile> = listOf(
+/** A getter (not a stored value) so titles follow the active language. */
+val kProfiles: List<OptimizationProfile>
+    get() = listOf(
     OptimizationProfile(
         id = "performance",
-        title = "Performans",
-        description = "Animasyonları kapatır, GPU ve yüksek yenileme hızını zorlar, arka planı temizler.",
+        title = tr("Performance", "Performans"),
+        description = tr(
+            "Turns off animations, forces GPU rendering and the peak refresh rate, and clears the background.",
+            "Animasyonları kapatır, GPU ve yüksek yenileme hızını zorlar, arka planı temizler.",
+        ),
         iconKey = "bolt",
         tweakIds = listOf(
             "performance_disable_animations",
@@ -33,8 +38,11 @@ val kProfiles: List<OptimizationProfile> = listOf(
     ),
     OptimizationProfile(
         id = "battery",
-        title = "Pil Tasarrufu",
-        description = "Yenileme hızını 60 Hz'e sabitler, pil tasarrufu modunu ve arka plan taramasını kısar.",
+        title = tr("Battery Saver", "Pil Tasarrufu"),
+        description = tr(
+            "Locks the refresh rate to 60 Hz and limits battery saver mode and background scanning.",
+            "Yenileme hızını 60 Hz'e sabitler, pil tasarrufu modunu ve arka plan taramasını kısar.",
+        ),
         iconKey = "battery",
         tweakIds = listOf(
             "performance_cap_refresh_rate_battery",
@@ -44,8 +52,11 @@ val kProfiles: List<OptimizationProfile> = listOf(
     ),
     OptimizationProfile(
         id = "privacy",
-        title = "Gizlilik",
-        description = "Reklam takibini ve otomatik hata raporlarını kapatır.",
+        title = tr("Privacy", "Gizlilik"),
+        description = tr(
+            "Turns off ad tracking and automatic error reports.",
+            "Reklam takibini ve otomatik hata raporlarını kapatır.",
+        ),
         iconKey = "shield",
         tweakIds = listOf(
             "privacy_limit_ad_tracking",
@@ -55,8 +66,11 @@ val kProfiles: List<OptimizationProfile> = listOf(
     ),
     OptimizationProfile(
         id = "cleanup",
-        title = "Temizlik",
-        description = "Önbellekleri ve arka plan uygulamalarını temizler, gereksiz Google/yazdırma bileşenlerini kapatır.",
+        title = tr("Cleanup", "Temizlik"),
+        description = tr(
+            "Clears caches and background apps and disables unneeded Google / printing components.",
+            "Önbellekleri ve arka plan uygulamalarını temizler, gereksiz Google/yazdırma bileşenlerini kapatır.",
+        ),
         iconKey = "cleaning",
         reversible = false,
         tweakIds = listOf(

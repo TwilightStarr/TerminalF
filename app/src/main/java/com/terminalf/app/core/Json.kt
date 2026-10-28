@@ -20,7 +20,7 @@ object Json {
         p.skipWs()
         val value = p.readValue()
         p.skipWs()
-        if (!p.atEnd()) throw ParseException("Beklenmeyen karakter: ${p.pos}")
+        if (!p.atEnd()) throw ParseException("Unexpected character: ${p.pos}")
         return value
     }
 
@@ -109,7 +109,7 @@ object Json {
         }
 
         fun readValue(): Any? {
-            if (atEnd()) throw ParseException("Beklenmeyen son")
+            if (atEnd()) throw ParseException("Unexpected end")
             return when (val c = s[pos]) {
                 '{' -> readObject()
                 '[' -> readArray()
@@ -117,12 +117,12 @@ object Json {
                 't' -> literal("true", true)
                 'f' -> literal("false", false)
                 'n' -> literal("null", null)
-                else -> if (c == '-' || c.isDigit()) readNumber() else throw ParseException("Beklenmeyen karakter '$c' @$pos")
+                else -> if (c == '-' || c.isDigit()) readNumber() else throw ParseException("Unexpected character '$c' @$pos")
             }
         }
 
         private fun literal(word: String, value: Any?): Any? {
-            if (!s.startsWith(word, pos)) throw ParseException("Geçersiz değer @$pos")
+            if (!s.startsWith(word, pos)) throw ParseException("Invalid value @$pos")
             pos += word.length
             return value
         }
@@ -137,10 +137,10 @@ object Json {
             }
             while (true) {
                 skipWs()
-                if (peek() != '"') throw ParseException("Anahtar bekleniyordu @$pos")
+                if (peek() != '"') throw ParseException("Expected key @$pos")
                 val key = readString()
                 skipWs()
-                if (peek() != ':') throw ParseException("':' bekleniyordu @$pos")
+                if (peek() != ':') throw ParseException("Expected ':' @$pos")
                 pos++
                 skipWs()
                 map[key] = readValue()
@@ -151,7 +151,7 @@ object Json {
                         pos++
                         return map
                     }
-                    else -> throw ParseException("',' veya '}' bekleniyordu @$pos")
+                    else -> throw ParseException("Expected ',' or '}' @$pos")
                 }
             }
         }
@@ -174,13 +174,13 @@ object Json {
                         pos++
                         return list
                     }
-                    else -> throw ParseException("',' veya ']' bekleniyordu @$pos")
+                    else -> throw ParseException("Expected ',' or ']' @$pos")
                 }
             }
         }
 
         private fun peek(): Char {
-            if (atEnd()) throw ParseException("Beklenmeyen son")
+            if (atEnd()) throw ParseException("Unexpected end")
             return s[pos]
         }
 
@@ -188,12 +188,12 @@ object Json {
             pos++ // açılış tırnağı
             val sb = StringBuilder()
             while (true) {
-                if (atEnd()) throw ParseException("Kapanmamış metin")
+                if (atEnd()) throw ParseException("Unterminated string")
                 val c = s[pos++]
                 when (c) {
                     '"' -> return sb.toString()
                     '\\' -> {
-                        if (atEnd()) throw ParseException("Geçersiz kaçış")
+                        if (atEnd()) throw ParseException("Invalid escape")
                         when (val e = s[pos++]) {
                             '"' -> sb.append('"')
                             '\\' -> sb.append('\\')
@@ -204,13 +204,13 @@ object Json {
                             'r' -> sb.append('\r')
                             't' -> sb.append('\t')
                             'u' -> {
-                                if (pos + 4 > s.length) throw ParseException("Geçersiz \\u")
+                                if (pos + 4 > s.length) throw ParseException("Invalid \\u")
                                 val hex = s.substring(pos, pos + 4)
-                                val code = hex.toIntOrNull(16) ?: throw ParseException("Geçersiz \\u$hex")
+                                val code = hex.toIntOrNull(16) ?: throw ParseException("Invalid \\u$hex")
                                 sb.append(code.toChar())
                                 pos += 4
                             }
-                            else -> throw ParseException("Geçersiz kaçış \\$e")
+                            else -> throw ParseException("Invalid escape \\$e")
                         }
                     }
                     else -> sb.append(c)
@@ -236,7 +236,7 @@ object Json {
             }
             val text = s.substring(start, pos)
             if (!isDouble) text.toLongOrNull()?.let { return it }
-            return text.toDoubleOrNull() ?: throw ParseException("Geçersiz sayı '$text'")
+            return text.toDoubleOrNull() ?: throw ParseException("Invalid number '$text'")
         }
     }
 }

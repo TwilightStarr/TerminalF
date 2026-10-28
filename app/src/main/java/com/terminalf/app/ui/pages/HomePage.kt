@@ -1,5 +1,6 @@
 package com.terminalf.app.ui.pages
 
+import com.terminalf.app.core.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -76,6 +77,7 @@ import com.terminalf.app.state.TweakOutcome
 import com.terminalf.app.ui.components.AppCard
 import com.terminalf.app.ui.components.FadeSlideIn
 import com.terminalf.app.ui.components.HealthRing
+import com.terminalf.app.ui.components.IconChip
 import com.terminalf.app.ui.components.LocalSheets
 import com.terminalf.app.ui.components.LocalToaster
 import com.terminalf.app.ui.components.PrimaryButton
@@ -129,7 +131,7 @@ fun HomePage(live: LiveStats, control: ControlController) {
         if (running != null) return
         if (!control.ready) {
             // Yetki yoksa bile yapılabilecek tek gerçek temizlik: kendi önbelleğimiz.
-            running = "Akıllı optimizasyon"
+            running = tr("Smart optimization", "Akıllı optimizasyon")
             val freed: Long
             try {
                 freed = container.storage.clearCache()
@@ -137,12 +139,12 @@ fun HomePage(live: LiveStats, control: ControlController) {
                 running = null
             }
             toast.show(
-                "${formatBytes(freed)} uygulama önbelleği temizlendi. Tam optimizasyon için kontrolü etkinleştirin.",
+                tr("${formatBytes(freed)} of app cache cleared. Enable control for full optimization.", "${formatBytes(freed)} uygulama önbelleği temizlendi. Tam optimizasyon için kontrolü etkinleştirin."),
             )
             sheets.showControlSetup(control)
             return
         }
-        running = "Akıllı optimizasyon"
+        running = tr("Smart optimization", "Akıllı optimizasyon")
         val a: TweakOutcome
         val b: TweakOutcome
         try {
@@ -154,18 +156,18 @@ fun HomePage(live: LiveStats, control: ControlController) {
         }
         val allOk = a.ok && b.ok
         val message = if (allOk) {
-            "Optimizasyon tamamlandı: bellek boşaltıldı, önbellekler temizlendi."
+            tr("Optimization complete: memory freed and caches cleared.", "Optimizasyon tamamlandı: bellek boşaltıldı, önbellekler temizlendi.")
         } else {
-            "Optimizasyon kısmen tamamlandı. Ayrıntılar için günlüğe bakın."
+            tr("Optimization partially complete. See the log for details.", "Optimizasyon kısmen tamamlandı. Ayrıntılar için günlüğe bakın.")
         }
-        control.reportDone("Akıllı optimizasyon", message, allOk)
+        control.reportDone(tr("Smart optimization", "Akıllı optimizasyon"), message, allOk)
         toast.show(message)
     }
 
     suspend fun onAdvice(action: AdviceAction) {
         when (action) {
-            AdviceAction.FreeMemory, AdviceAction.CoolDown -> runAction("Hızlandır") { control.freeMemory() }
-            AdviceAction.CleanStorage -> runAction("Önbellek") { control.trimAllCaches() }
+            AdviceAction.FreeMemory, AdviceAction.CoolDown -> runAction(tr("Boost", "Hızlandır")) { control.freeMemory() }
+            AdviceAction.CleanStorage -> runAction(tr("Cache", "Önbellek")) { control.trimAllCaches() }
             AdviceAction.SaveBattery -> {
                 if (!control.ready) {
                     sheets.showControlSetup(control)
@@ -173,9 +175,9 @@ fun HomePage(live: LiveStats, control: ControlController) {
                 }
                 val result = control.runProfile(profileById("battery")!!, apply = true)
                 if (result.applied + result.failed > 0) {
-                    control.reportDone("Pil Tasarrufu", result.summary, result.failed == 0)
+                    control.reportDone(tr("Battery Saver", "Pil Tasarrufu"), result.summary, result.failed == 0)
                 }
-                toast.show("Pil Tasarrufu: ${result.summary}")
+                toast.show(tr("Battery Saver: ${result.summary}", "Pil Tasarrufu: ${result.summary}"))
             }
             AdviceAction.EnableControl -> sheets.showControlSetup(control)
         }
@@ -245,7 +247,7 @@ fun HomePage(live: LiveStats, control: ControlController) {
                 HealthCard(
                     score = score,
                     hasData = ram != null || disk != null || batteryPercent != null,
-                    busy = running == "Akıllı optimizasyon",
+                    busy = running == tr("Smart optimization", "Akıllı optimizasyon"),
                     onOptimize = { scope.launch { smartOptimize() } },
                 )
             }
@@ -257,31 +259,31 @@ fun HomePage(live: LiveStats, control: ControlController) {
             if (advice.isEmpty()) AllGoodCard()
             FadeSlideIn(modifier = Modifier.fillMaxWidth(), index = 3) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    SectionHeader("Anlık Durum")
+                    SectionHeader(tr("Live Status", "Anlık Durum"))
                     StatGridFit(
                         first = {
                             StatTile(
                                 icon = Icons.Rounded.Memory,
-                                label = "Bellek (RAM)",
-                                value = if (ram == null) "—" else "%${(ram.usedRatio * 100).roundToInt()}",
+                                label = tr("Memory (RAM)", "Bellek (RAM)"),
+                                value = if (ram == null) "—" else tr("${(ram.usedRatio * 100).roundToInt()}%", "%${(ram.usedRatio * 100).roundToInt()}"),
                                 caption = if (ram == null) {
-                                    "Okunamadı"
+                                    tr("Unavailable", "Okunamadı")
                                 } else {
                                     "${formatBytes(ram.usedBytes)} / ${formatBytes(ram.totalBytes)}"
                                 },
                                 ratio = ram?.usedRatio,
-                                color = c.forUsage(ram?.usedRatio ?: 0.0),
+                                color = c.forUsage(ram?.usedRatio ?: 0.0, base = c.blue),
                                 modifier = it,
                             )
                         },
                         second = {
                             StatTile(
                                 icon = Icons.Rounded.SdStorage,
-                                label = "Depolama",
-                                value = if (disk == null) "—" else "%${(disk.usedRatio * 100).roundToInt()}",
-                                caption = if (disk == null) "Okunamadı" else "${formatBytes(disk.freeBytes)} boş",
+                                label = tr("Storage", "Depolama"),
+                                value = if (disk == null) "—" else tr("${(disk.usedRatio * 100).roundToInt()}%", "%${(disk.usedRatio * 100).roundToInt()}"),
+                                caption = if (disk == null) tr("Unavailable", "Okunamadı") else tr("${formatBytes(disk.freeBytes)} free", "${formatBytes(disk.freeBytes)} boş"),
                                 ratio = disk?.usedRatio,
-                                color = c.forUsage(disk?.usedRatio ?: 0.0),
+                                color = c.forUsage(disk?.usedRatio ?: 0.0, base = c.violet),
                                 modifier = it,
                             )
                         },
@@ -291,7 +293,7 @@ fun HomePage(live: LiveStats, control: ControlController) {
                         first = {
                             StatTile(
                                 icon = if (charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryFull,
-                                label = "Pil",
+                                label = tr("Battery", "Pil"),
                                 value = if (batteryPercent == null) "—" else "%$batteryPercent",
                                 caption = batteryCaption(battery),
                                 ratio = if (batteryPercent == null) null else batteryPercent / 100.0,
@@ -302,9 +304,9 @@ fun HomePage(live: LiveStats, control: ControlController) {
                         second = {
                             StatTile(
                                 icon = Icons.Rounded.Thermostat,
-                                label = "Sıcaklık",
+                                label = tr("Temperature", "Sıcaklık"),
                                 value = if (temp == null) "—" else "${fixed(temp, 1)}°C",
-                                caption = if (uptime == null) null else "Açık: ${formatDuration(uptime)}",
+                                caption = if (uptime == null) null else tr("Uptime: ${formatDuration(uptime)}", "Açık: ${formatDuration(uptime)}"),
                                 ratio = if (temp == null) null else ((temp - 20) / 30).coerceIn(0.0, 1.0),
                                 color = if (temp == null) {
                                     c.muted
@@ -313,7 +315,7 @@ fun HomePage(live: LiveStats, control: ControlController) {
                                 } else if (temp >= 40) {
                                     c.warn
                                 } else {
-                                    c.primary
+                                    c.orange
                                 },
                                 modifier = it,
                             )
@@ -323,21 +325,23 @@ fun HomePage(live: LiveStats, control: ControlController) {
             }
             FadeSlideIn(modifier = Modifier.fillMaxWidth(), index = 4) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    SectionHeader("Hızlı İşlemler")
+                    SectionHeader(tr("Quick Actions", "Hızlı İşlemler"))
                     Row(modifier = Modifier.fillMaxWidth()) {
                         QuickAction(
                             icon = Icons.Rounded.RocketLaunch,
-                            label = "Hızlandır",
-                            busy = running == "Hızlandır",
-                            onTap = { scope.launch { runAction("Hızlandır") { control.freeMemory() } } },
+                            label = tr("Boost", "Hızlandır"),
+                            color = c.orange,
+                            busy = running == tr("Boost", "Hızlandır"),
+                            onTap = { scope.launch { runAction(tr("Boost", "Hızlandır")) { control.freeMemory() } } },
                             modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.width(12.dp))
                         QuickAction(
                             icon = Icons.Rounded.CleaningServices,
-                            label = "Önbellek Temizle",
-                            busy = running == "Önbellek",
-                            onTap = { scope.launch { runAction("Önbellek") { control.trimAllCaches() } } },
+                            label = tr("Clear Cache", "Önbellek Temizle"),
+                            color = c.cyan,
+                            busy = running == tr("Cache", "Önbellek"),
+                            onTap = { scope.launch { runAction(tr("Cache", "Önbellek")) { control.trimAllCaches() } } },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -345,7 +349,8 @@ fun HomePage(live: LiveStats, control: ControlController) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         QuickAction(
                             icon = Icons.AutoMirrored.Rounded.ReceiptLong,
-                            label = "İşlem Günlüğü",
+                            label = tr("Activity Log", "İşlem Günlüğü"),
+                            color = c.violet,
                             busy = false,
                             onTap = { scope.launch { sheets.showLogSheet(control) } },
                             modifier = Modifier.weight(1f),
@@ -353,7 +358,8 @@ fun HomePage(live: LiveStats, control: ControlController) {
                         Spacer(Modifier.width(12.dp))
                         QuickAction(
                             icon = Icons.Rounded.VerifiedUser,
-                            label = "Kontrol Durumu",
+                            label = tr("Control Status", "Kontrol Durumu"),
+                            color = c.green,
                             busy = false,
                             onTap = { scope.launch { sheets.showControlSetup(control) } },
                             modifier = Modifier.weight(1f),
@@ -369,11 +375,11 @@ private fun batteryCaption(b: BatteryReading): String {
     val remaining = b.estimatedRemaining
     return when (b.state) {
         BatteryState.Charging ->
-            if (remaining == null) "Şarj oluyor" else "${formatDuration(remaining)} doluma"
-        BatteryState.Full -> "Dolu"
+            if (remaining == null) tr("Charging", "Şarj oluyor") else tr("${formatDuration(remaining)} to full", "${formatDuration(remaining)} doluma")
+        BatteryState.Full -> tr("Full", "Dolu")
         BatteryState.Discharging ->
-            if (remaining == null) "Pil kullanılıyor" else "${formatDuration(remaining)} kaldı"
-        else -> "Durum bilinmiyor"
+            if (remaining == null) tr("On battery", "Pil kullanılıyor") else tr("${formatDuration(remaining)} left", "${formatDuration(remaining)} kaldı")
+        else -> tr("Status unknown", "Durum bilinmiyor")
     }
 }
 
@@ -383,7 +389,7 @@ private fun batteryColor(percent: Int, charging: Boolean): Color {
     if (charging) return c.good
     if (percent <= 20) return c.danger
     if (percent <= 50) return c.warn
-    return c.primary
+    return c.green
 }
 
 @Composable
@@ -403,7 +409,7 @@ private fun HomeHeader(control: ControlController, onTapStatus: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         StatusPill(
-            label = if (control.checking) "Denetleniyor" else (if (ready) "Kontrol açık" else "Kontrol kapalı"),
+            label = if (control.checking) tr("Checking", "Denetleniyor") else (if (ready) tr("Control on", "Kontrol açık") else tr("Control off", "Kontrol kapalı")),
             color = color,
             icon = if (ready) Icons.Rounded.Verified else Icons.Outlined.Lock,
             modifier = Modifier.clip(RoundedCornerShape(20.dp)).clickable { onTapStatus() },
@@ -419,17 +425,17 @@ private fun HealthCard(score: Int, hasData: Boolean, busy: Boolean, onOptimize: 
             HealthRing(score = score)
             Spacer(Modifier.width(18.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Cihaz Sağlığı", color = c.muted, fontSize = 13.sp)
+                Text(tr("Device Health", "Cihaz Sağlığı"), color = c.muted, fontSize = 13.sp)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    if (hasData) healthLabel(score) else "Ölçülüyor…",
+                    if (hasData) healthLabel(score) else tr("Measuring…", "Ölçülüyor…"),
                     fontSize = 21.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = if (hasData) c.forHealth(score) else c.muted,
                 )
                 Spacer(Modifier.height(14.dp))
                 PrimaryButton(
-                    label = "Akıllı Optimizasyon",
+                    label = tr("Smart Optimization", "Akıllı Optimizasyon"),
                     icon = Icons.Rounded.AutoFixHigh,
                     busy = busy,
                     onClick = onOptimize,
@@ -445,7 +451,7 @@ private fun AdviceCard(advice: Advice, onTap: () -> Unit) {
     val color = when (advice.level) {
         AdviceLevel.Critical -> c.danger
         AdviceLevel.Warning -> c.warn
-        AdviceLevel.Info -> c.secondary
+        AdviceLevel.Info -> c.blue
     }
     AppCard(borderColor = color.faded(0.45f)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -474,7 +480,7 @@ private fun AllGoodCard() {
             Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = c.good)
             Spacer(Modifier.width(12.dp))
             Text(
-                "Her şey yolunda. Yapmanız gereken bir şey yok.",
+                tr("All good. Nothing for you to do.", "Her şey yolunda. Yapmanız gereken bir şey yok."),
                 modifier = Modifier.weight(1f),
                 color = c.text,
                 fontWeight = FontWeight.SemiBold,
@@ -503,35 +509,20 @@ private fun StatGridFit(
 private fun QuickAction(
     icon: ImageVector,
     label: String,
+    color: Color,
     busy: Boolean,
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = AppTheme.colors
-    val shape = RoundedCornerShape(12.dp)
     AppCard(
         modifier = modifier.aspectRatio(1.9f),
         onClick = if (busy) null else onTap,
         padding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        borderColor = color.faded(0.22f),
     ) {
         Row(modifier = Modifier.fillMaxWidth().fillMaxHeight(), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(shape)
-                    .background(c.primary.faded(0.14f), shape),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (busy) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.4.dp,
-                        color = c.primary,
-                    )
-                } else {
-                    Icon(icon, contentDescription = null, tint = c.primary, modifier = Modifier.size(21.dp))
-                }
-            }
+            IconChip(icon = icon, color = color, size = 40.dp, busy = busy)
             Spacer(Modifier.width(10.dp))
             Text(
                 label,
